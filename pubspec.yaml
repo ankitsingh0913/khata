@@ -1,0 +1,55 @@
+name: khata
+description: vyapar app
+
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.4.4 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State Management
+  provider: ^6.1.1
+
+  # Database
+  sqflite: ^2.3.0
+  path: ^1.8.3
+
+  # PDF Generation
+  pdf: ^3.10.7
+  printing: ^5.11.1
+
+  # File & Sharing
+  path_provider: ^2.1.1
+  share_plus: ^7.2.1
+  url_launcher: ^6.2.1
+
+  # UI Components
+  flutter_svg: ^2.0.9
+  google_fonts: ^6.1.0
+  intl: ^0.18.1
+  fl_chart: ^0.65.0
+
+  # Utilities
+  uuid: ^4.2.1
+  shared_preferences: ^2.2.2
+
+  # Icons
+  cupertino_icons: ^1.0.6
+  iconsax: ^0.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.1
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+    - assets/icons/
