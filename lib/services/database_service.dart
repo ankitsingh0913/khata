@@ -285,35 +285,53 @@ class DatabaseService {
     final db = await database;
 
     await db.transaction((txn) async {
-      // Insert bill
+      // 1. Insert bill
       await txn.insert('bills', bill.toMap());
 
-      // Insert bill items
+      // 2. Insert bill items and update stock
       for (var item in bill.items) {
         await txn.insert('bill_items', item.toMap());
 
-        // Update stock
-        final product = await getProductById(item.productId);
-        if (product != null) {
-          final newStock = product.stock - item.quantity;
+        // Update stock using txn (not db!)
+        final productResult = await txn.query(
+          'products',
+          where: 'id = ?',
+          whereArgs: [item.productId],
+        );
+
+        if (productResult.isNotEmpty) {
+          final currentStock = productResult.first['stock'] as int? ?? 0;
+          final newStock = currentStock - item.quantity;
+
           await txn.update(
             'products',
-            {'stock': newStock < 0 ? 0 : newStock, 'updatedAt': DateTime.now().toIso8601String()},
+            {
+              'stock': newStock < 0 ? 0 : newStock,
+              'updatedAt': DateTime.now().toIso8601String(),
+            },
             where: 'id = ?',
             whereArgs: [item.productId],
           );
         }
       }
 
-      // Update customer balance if credit
+      // 3. Update customer balance if credit payment
       if (bill.customerId != null && bill.paymentType == AppConstants.paymentCredit) {
-        final customer = await getCustomerById(bill.customerId!);
-        if (customer != null) {
+        final customerResult = await txn.query(
+          'customers',
+          where: 'id = ?',
+          whereArgs: [bill.customerId],
+        );
+
+        if (customerResult.isNotEmpty) {
+          final currentPending = (customerResult.first['pendingAmount'] as num?)?.toDouble() ?? 0.0;
+          final currentTotal = (customerResult.first['totalPurchase'] as num?)?.toDouble() ?? 0.0;
+
           await txn.update(
             'customers',
             {
-              'pendingAmount': customer.pendingAmount + bill.total,
-              'totalPurchase': customer.totalPurchase + bill.total,
+              'pendingAmount': currentPending + bill.total,
+              'totalPurchase': currentTotal + bill.total,
               'updatedAt': DateTime.now().toIso8601String(),
             },
             where: 'id = ?',
