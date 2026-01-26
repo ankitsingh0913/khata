@@ -70,7 +70,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildHomeTab() {
     final currencyFormat = NumberFormat.currency(symbol: AppConstants.currency, decimalDigits: 0);
-
     return Consumer<DashboardProvider>(
       builder: (context, dashboard, _) {
         final auth = context.watch<AuthProvider>();
@@ -311,7 +310,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ),
                           );
                         },
-                        childCount: billProvider.bills.take(5).length,
+                        childCount: billProvider.bills.take(10).length,
                       ),
                     ),
                   );

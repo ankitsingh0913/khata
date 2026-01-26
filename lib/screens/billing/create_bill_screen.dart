@@ -1,5 +1,5 @@
-// lib/screens/billing/create_bill_screen.dart
 import 'package:flutter/material.dart';
+import 'package:khata/widgets/quick_add_customer_dialog.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../models/product.dart';
@@ -12,7 +12,9 @@ import '../../config/app_constants.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
 import '../customers/add_customer_screen.dart';
+import '../../widgets/cash_payment_confirmation_dialog.dart';
 import 'bill_details_screen.dart';
+import 'upi_demo_payment_screen.dart';
 
 class CreateBillScreen extends StatefulWidget {
   const CreateBillScreen({super.key});
@@ -88,13 +90,29 @@ class _CreateBillScreenState extends State<CreateBillScreen> {
             _buildPaymentOption(
               icon: Icons.qr_code,
               title: 'UPI',
-              subtitle: 'Pay via UPI',
+              subtitle: 'Pay via UPI (Demo Mode)', // UPDATED subtitle
               value: AppConstants.paymentUpi,
               selected: billProvider.paymentType == AppConstants.paymentUpi,
               onTap: () {
                 billProvider.setPaymentType(AppConstants.paymentUpi);
                 Navigator.pop(context);
               },
+              // ADD this optional parameter to show demo badge
+              trailing: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppTheme.warningColor,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Text(
+                  'DEMO',
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
             ),
             _buildPaymentOption(
               icon: Icons.credit_card,
@@ -127,6 +145,7 @@ class _CreateBillScreenState extends State<CreateBillScreen> {
     );
   }
 
+  // UPDATE _buildPaymentOption to accept trailing widget
   Widget _buildPaymentOption({
     required IconData icon,
     required String title,
@@ -135,27 +154,47 @@ class _CreateBillScreenState extends State<CreateBillScreen> {
     required bool selected,
     bool isCredit = false,
     required VoidCallback onTap,
+    Widget? trailing, // ADD this parameter
   }) {
-    return ListTile(
-      leading: Container(
-        width: 50,
-        height: 50,
-        decoration: BoxDecoration(
-          color: (isCredit ? AppTheme.warningColor : AppTheme.primaryColor)
-              .withOpacity(0.1),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        onTap: onTap,
+        shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
+          side: BorderSide(
+            color: selected ? AppTheme.primaryColor : AppTheme.borderColor,
+            width: selected ? 2 : 1,
+          ),
         ),
-        child: Icon(
-          icon,
-          color: isCredit ? AppTheme.warningColor : AppTheme.primaryColor,
+        tileColor: selected ? AppTheme.primaryColor.withOpacity(0.05) : null,
+        leading: Container(
+          width: 50,
+          height: 50,
+          decoration: BoxDecoration(
+            color: (isCredit ? AppTheme.warningColor : AppTheme.primaryColor)
+                .withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(
+            icon,
+            color: isCredit ? AppTheme.warningColor : AppTheme.primaryColor,
+          ),
         ),
+        title: Row(
+          children: [
+            Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+            if (trailing != null) ...[
+              const SizedBox(width: 8),
+              trailing,
+            ],
+          ],
+        ),
+        subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
+        trailing: selected
+            ? const Icon(Icons.check_circle, color: AppTheme.successColor)
+            : const Icon(Icons.circle_outlined, color: AppTheme.borderColor),
       ),
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-      subtitle: Text(subtitle),
-      trailing: selected
-          ? const Icon(Icons.check_circle, color: AppTheme.successColor)
-          : null,
-      onTap: onTap,
     );
   }
 
@@ -165,19 +204,131 @@ class _CreateBillScreenState extends State<CreateBillScreen> {
     if (billProvider.cartItems.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please add items to cart'),
+          content: Text('Please add at least one item to the bill'),
           backgroundColor: AppTheme.errorColor,
         ),
       );
       return;
     }
 
+    // ========== NEW: Handle UPI Payment ==========
+    if (billProvider.paymentType == AppConstants.paymentUpi) {
+      // Create bill first (as unpaid)
+      final bill = await billProvider.createBillForUpiPayment();
+
+      if (bill != null && mounted) {
+        // Show UPI payment screen
+        final upiResult = await UpiDemoPaymentScreen.show(
+          context,
+          bill: bill,
+        );
+
+        if (upiResult.success) {
+          // Payment successful - navigate to bill detail
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Bill ${bill.billNumber} paid successfully!'),
+              backgroundColor: AppTheme.successColor,
+            ),
+          );
+
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => BillDetailScreen(
+                billId: bill.id,
+                isNewBill: true,
+              ),
+            ),
+          );
+        } else if (upiResult.cancelled) {
+          // Payment cancelled - bill remains unpaid
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Payment cancelled. Bill saved as unpaid.'),
+              backgroundColor: AppTheme.warningColor,
+            ),
+          );
+
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => BillDetailScreen(
+                billId: bill.id,
+                isNewBill: true,
+              ),
+            ),
+          );
+        } else {
+          // Payment not received
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => BillDetailScreen(
+                billId: bill.id,
+                isNewBill: true,
+              ),
+            ),
+          );
+        }
+      }
+      return; // Exit here for UPI flow
+    }
+    // ========== END UPI HANDLING ==========
+
+    // EXISTING CODE BELOW - DO NOT MODIFY
+    // Confirm if credit sale
+    if (billProvider.paymentType == AppConstants.paymentCredit) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('Confirm Credit Sale'),
+          content: Text(
+            'This will add ₹${billProvider.total.toStringAsFixed(0)} to ${billProvider.selectedCustomer?.name}\'s pending dues.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.warningColor,
+              ),
+              child: const Text('Confirm'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmed != true) return;
+    }
+
+    // Create the bill
     final bill = await billProvider.createBill();
 
     if (bill != null && mounted) {
+      // Cash Payment Confirmation (existing code - DO NOT MODIFY)
+      if (billProvider.paymentType == AppConstants.paymentCash) {
+        final cashStatus = await CashPaymentConfirmationDialog.show(
+          context,
+          amount: bill.total,
+          billNumber: bill.billNumber,
+        );
+
+        if (cashStatus == CashPaymentStatus.notPaid) {
+          await billProvider.updateBillPaymentStatus(
+            billId: bill.id,
+            isPaid: false,
+          );
+        }
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Bill created successfully!'),
+        SnackBar(
+          content: Text('Bill ${bill.billNumber} created successfully!'),
           backgroundColor: AppTheme.successColor,
         ),
       );
@@ -185,7 +336,10 @@ class _CreateBillScreenState extends State<CreateBillScreen> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => BillDetailScreen(billId: bill.id),
+          builder: (_) => BillDetailScreen(
+            billId: bill.id,
+            isNewBill: true,
+          ),
         ),
       );
     }
@@ -830,20 +984,86 @@ class _CustomerSearchSheetState extends State<CustomerSearchSheet> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.person_add),
-                  onPressed: () async {
-                    final customer = await Navigator.push<Customer>(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const AddCustomerScreen(),
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: PopupMenuButton<String>(
+                    icon: const Icon(Icons.person_add, color: Colors.white),
+                    tooltip: 'Add New Customer',
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    onSelected: (value) async {
+                      if (value == 'quick') {
+                        // Quick add - minimal dialog
+                        final result = await QuickAddCustomerDialog.show(context);
+                        if (result.hasCustomer && mounted) {
+                          context.read<BillProvider>().setCustomer(result.customer as Customer?);
+                          Navigator.pop(context);
+                        }
+                      } else if (value == 'full') {
+                        // Full add - navigate to full screen
+                        final customer = await Navigator.push<Customer>(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const AddCustomerScreen(),
+                          ),
+                        );
+                        if (customer != null && mounted) {
+                          context.read<BillProvider>().setCustomer(customer);
+                          Navigator.pop(context);
+                        }
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: 'quick',
+                        child: Row(
+                          children: [
+                            Icon(Icons.flash_on, color: AppTheme.warningColor),
+                            SizedBox(width: 12),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Quick Add'),
+                                Text(
+                                  'Name & Phone only',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: AppTheme.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
-                    );
-                    if (customer != null && mounted) {
-                      context.read<BillProvider>().setCustomer(customer);
-                      Navigator.pop(context);
-                    }
-                  },
+                      const PopupMenuItem(
+                        value: 'full',
+                        child: Row(
+                          children: [
+                            Icon(Icons.person_add, color: AppTheme.primaryColor),
+                            SizedBox(width: 12),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Full Details'),
+                                Text(
+                                  'All customer info',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: AppTheme.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),

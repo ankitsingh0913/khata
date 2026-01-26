@@ -1,6 +1,6 @@
 // lib/config/app_constants.dart
 class AppConstants {
-  static const String appName = 'Smart Shopkeeper';
+  static const String appName = 'Khata';
   static const String currency = '₹';
 
   // Payment Types

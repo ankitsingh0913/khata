@@ -86,6 +86,104 @@ class BillProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  Future<Bill?> createBillForUpiPayment({String? notes}) async {
+    if (_cartItems.isEmpty) {
+      _error = 'Cart is empty';
+      notifyListeners();
+      return null;
+    }
+
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final billNumber = await _db.generateBillNumber();
+      final billId = const Uuid().v4();
+
+      final items = _cartItems.map((item) => item.copyWith(billId: billId)).toList();
+
+      // UPI bills start as unpaid until payment is confirmed
+      const status = AppConstants.billUnpaid;
+      const paidAmount = 0.0;
+
+      final bill = Bill(
+        id: billId,
+        billNumber: billNumber,
+        customerId: _selectedCustomer?.id,
+        customerName: _selectedCustomer?.name,
+        customerPhone: _selectedCustomer?.phone,
+        items: items,
+        subtotal: subtotal,
+        discount: _discount,
+        total: total,
+        paidAmount: paidAmount,
+        paymentType: AppConstants.paymentUpi, // Mark as UPI payment
+        status: status,
+        notes: notes,
+      );
+
+      await _db.insertBill(bill);
+      _currentBill = bill;
+      _bills.insert(0, bill);
+      _unpaidBills.insert(0, bill);
+
+      clearCart();
+
+      _isLoading = false;
+      notifyListeners();
+      return bill;
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return null;
+    }
+  }
+
+  Future<bool> updateBillPaymentStatus({
+    required String billId,
+    required bool isPaid,
+  }) async {
+    try {
+      final bill = await _db.getBillById(billId);
+      if (bill == null) return false;
+
+      final newStatus = isPaid ? AppConstants.billPaid : AppConstants.billUnpaid;
+      final newPaidAmount = isPaid ? bill.total : 0.0;
+
+      final updatedBill = bill.copyWith(
+        status: newStatus,
+        paidAmount: newPaidAmount,
+      );
+
+      await _db.updateBill(updatedBill);
+
+      // Update local lists
+      final index = _bills.indexWhere((b) => b.id == billId);
+      if (index != -1) {
+        _bills[index] = updatedBill;
+      }
+
+      if (_currentBill?.id == billId) {
+        _currentBill = updatedBill;
+      }
+
+      // Update unpaid bills list
+      if (isPaid) {
+        _unpaidBills.removeWhere((b) => b.id == billId);
+      } else if (!_unpaidBills.any((b) => b.id == billId)) {
+        _unpaidBills.insert(0, updatedBill);
+      }
+
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
   void updateCartItemQuantity(String productId, int quantity) {
     final index = _cartItems.indexWhere((item) => item.productId == productId);
     if (index != -1) {

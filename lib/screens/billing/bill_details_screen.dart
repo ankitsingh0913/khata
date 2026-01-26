@@ -17,12 +17,12 @@ import '../dashboard/dashboard_screen.dart';
 
 class BillDetailScreen extends StatefulWidget {
   final String billId;
-  final bool isNewBill; // Add this flag to know if coming from bill creation
+  final bool isNewBill;
 
   const BillDetailScreen({
     super.key,
     required this.billId,
-    this.isNewBill = false, // Default false
+    this.isNewBill = false,
   });
 
   @override
@@ -52,7 +52,6 @@ class _BillDetailScreenState extends State<BillDetailScreen> {
     setState(() => _isLoading = false);
   }
 
-  // Navigate to home/dashboard
   void _goToHome() {
     // Refresh dashboard data
     context.read<DashboardProvider>().loadDashboard();
@@ -60,7 +59,7 @@ class _BillDetailScreenState extends State<BillDetailScreen> {
     // Navigate to dashboard and remove all previous routes
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const DashboardScreen()),
-          (route) => false, // Remove all routes
+          (route) => false,
     );
   }
 
@@ -69,9 +68,9 @@ class _BillDetailScreenState extends State<BillDetailScreen> {
     if (widget.isNewBill) {
       // If coming from bill creation, go to home
       _goToHome();
-      return false; // Don't pop normally
+      return false;
     }
-    return true; // Allow normal back navigation
+    return true;
   }
 
   Future<void> _shareBill() async {
@@ -181,12 +180,6 @@ class _BillDetailScreenState extends State<BillDetailScreen> {
             },
           ),
           actions: [
-            // Home button
-            IconButton(
-              icon: const Icon(Icons.home_outlined),
-              onPressed: _goToHome,
-              tooltip: 'Go to Home',
-            ),
             IconButton(
               icon: const Icon(Icons.share_outlined),
               onPressed: _shareBill,
@@ -682,7 +675,6 @@ class _BillDetailScreenState extends State<BillDetailScreen> {
 
               const SizedBox(height: 16),
 
-              // Done / Go to Home Button
               CustomButton(
                 text: widget.isNewBill ? 'Done - Go to Home' : 'Back to Home',
                 icon: Icons.home,

@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:khata/screens/auth/otp_screen.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../config/app_theme.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
 import '../dashboard/dashboard_screen.dart';
+import '../../widgets/social_login_buttons.dart';
+import '../../services/social_auth_service.dart';
+
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -26,6 +30,34 @@ class _LoginScreenState extends State<LoginScreen> {
     _ownerNameController.dispose();
     _phoneController.dispose();
     super.dispose();
+  }
+
+  void _handleSocialAuthResult(SocialAuthResult result) {
+    if (result.success) {
+      // Social login successful
+      // You can auto-fill fields or directly login
+      if (result.displayName != null) {
+        _ownerNameController.text = result.displayName!;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Signed in with ${result.provider.name}'),
+          backgroundColor: AppTheme.successColor,
+        ),
+      );
+
+      // Optionally auto-login if you have enough info
+      // _handleLogin();
+    } else {
+      // Show error
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result.error ?? 'Sign in failed'),
+          backgroundColor: AppTheme.errorColor,
+        ),
+      );
+    }
   }
 
   Future<void> _handleLogin() async {
@@ -155,8 +187,19 @@ class _LoginScreenState extends State<LoginScreen> {
                 CustomButton(
                   text: 'Get Started',
                   isLoading: _isLoading,
-                  onPressed: _handleLogin,
+                  onPressed:
+                  // _handleLogin,
+                  (){
+                    Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(builder: (_) => OtpScreen(phone: _phoneController.text, shopName: _shopNameController.text, ownerName: _ownerNameController.text)),
+                    );
+                  },
                   icon: Icons.arrow_forward_rounded,
+                ),
+                const SizedBox(height: 8),
+                SocialLoginButtonsSection(
+                  onAuthResult: _handleSocialAuthResult,
+                  enabled: !_isLoading,
                 ),
               ],
             ),
