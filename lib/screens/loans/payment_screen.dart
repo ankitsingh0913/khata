@@ -61,6 +61,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   Future<void> _recordPayment() async {
     if (!_formKey.currentState!.validate()) return;
+
     if (_selectedBill == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -73,29 +74,61 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
     setState(() => _isLoading = true);
 
-    final amount = double.parse(_amountController.text);
-    final success = await context.read<BillProvider>().recordPayment(
-      billId: _selectedBill!.id,
-      amount: amount,
-      paymentType: _selectedPaymentType,
-      notes: _notesController.text.isNotEmpty ? _notesController.text : null,
-    );
+    try {
+      final amount = double.parse(_amountController.text);
 
-    setState(() => _isLoading = false);
-
-    if (success && mounted) {
-      // Refresh customer data
-      if (widget.customer != null) {
-        await context.read<CustomerProvider>().loadCustomers();
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Payment recorded successfully!'),
-          backgroundColor: AppTheme.successColor,
-        ),
+      // Record payment
+      final success = await context.read<BillProvider>().recordPayment(
+        billId: _selectedBill!.id,
+        amount: amount,
+        paymentType: _selectedPaymentType,
+        notes: _notesController.text.isNotEmpty ? _notesController.text : null,
       );
-      Navigator.pop(context);
+
+      if (!mounted) return;
+
+      if (success) {
+        // Refresh customer data AFTER bill provider finishes
+        // Use a slight delay to ensure database operations are complete
+        if (widget.customer != null) {
+          await Future.delayed(const Duration(milliseconds: 100));
+          if (mounted) {
+            await context.read<CustomerProvider>().loadCustomers();
+          }
+        }
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Payment recorded successfully!'),
+              backgroundColor: AppTheme.successColor,
+            ),
+          );
+          Navigator.pop(context, true); // Return true to indicate success
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to record payment'),
+              backgroundColor: AppTheme.errorColor,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 

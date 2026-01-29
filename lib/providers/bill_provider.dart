@@ -145,35 +145,89 @@ class BillProvider with ChangeNotifier {
     required bool isPaid,
   }) async {
     try {
-      final bill = await _db.getBillById(billId);
-      if (bill == null) return false;
+      final db = await _db.database;
 
-      final newStatus = isPaid ? AppConstants.billPaid : AppConstants.billUnpaid;
-      final newPaidAmount = isPaid ? bill.total : 0.0;
-
-      final updatedBill = bill.copyWith(
-        status: newStatus,
-        paidAmount: newPaidAmount,
+      // Get bill info
+      final billResult = await db.query(
+        'bills',
+        where: 'id = ?',
+        whereArgs: [billId],
       );
 
-      await _db.updateBill(updatedBill);
-
-      // Update local lists
-      final index = _bills.indexWhere((b) => b.id == billId);
-      if (index != -1) {
-        _bills[index] = updatedBill;
+      if (billResult.isEmpty) {
+        _error = 'Bill not found';
+        notifyListeners();
+        return false;
       }
 
-      if (_currentBill?.id == billId) {
-        _currentBill = updatedBill;
-      }
+      final billData = billResult.first;
+      final total = (billData['total'] as num?)?.toDouble() ?? 0.0;
+      final customerId = billData['customerId'] as String?;
+      final currentPaidAmount = (billData['paidAmount'] as num?)?.toDouble() ?? 0.0;
+      final paymentType = billData['paymentType'] as String?;
 
-      // Update unpaid bills list
-      if (isPaid) {
-        _unpaidBills.removeWhere((b) => b.id == billId);
-      } else if (!_unpaidBills.any((b) => b.id == billId)) {
-        _unpaidBills.insert(0, updatedBill);
-      }
+      // Use transaction for atomic updates
+      await db.transaction((txn) async {
+        final newStatus = isPaid ? AppConstants.billPaid : AppConstants.billUnpaid;
+        final newPaidAmount = isPaid ? total : 0.0;
+
+        // Update bill
+        await txn.update(
+          'bills',
+          {
+            'status': newStatus,
+            'paidAmount': newPaidAmount,
+            'updatedAt': DateTime.now().toIso8601String(),
+          },
+          where: 'id = ?',
+          whereArgs: [billId],
+        );
+
+        // Update customer pending amount if needed
+        // Only for credit payments or when changing from paid to unpaid
+        if (customerId != null && paymentType == AppConstants.paymentCredit) {
+          final customerResult = await txn.query(
+            'customers',
+            columns: ['pendingAmount'],
+            where: 'id = ?',
+            whereArgs: [customerId],
+          );
+
+          if (customerResult.isNotEmpty) {
+            final currentPending =
+                (customerResult.first['pendingAmount'] as num?)?.toDouble() ?? 0.0;
+
+            double newPending;
+            if (isPaid) {
+              // Reduce pending amount
+              newPending = currentPending - total;
+            } else {
+              // Increase pending amount (payment reversed)
+              newPending = currentPending + total;
+            }
+
+            await txn.update(
+              'customers',
+              {
+                'pendingAmount': newPending < 0 ? 0 : newPending,
+                'updatedAt': DateTime.now().toIso8601String(),
+              },
+              where: 'id = ?',
+              whereArgs: [customerId],
+            );
+          }
+        }
+      });
+
+      // Reload data AFTER transaction is complete
+      await Future.microtask(() async {
+        _bills = await _db.getAllBills();
+        _unpaidBills = await _db.getUnpaidBills();
+
+        if (_currentBill?.id == billId) {
+          _currentBill = await _db.getBillById(billId);
+        }
+      });
 
       notifyListeners();
       return true;
@@ -295,22 +349,38 @@ class BillProvider with ChangeNotifier {
     String? notes,
   }) async {
     try {
+      // Get bill info before creating payment
+      final bill = await _db.getBillById(billId);
+      if (bill == null) {
+        _error = 'Bill not found';
+        notifyListeners();
+        return false;
+      }
+
       final payment = Payment(
         id: const Uuid().v4(),
         billId: billId,
-        customerId: _currentBill?.customerId,
+        customerId: bill.customerId, // Use bill's customerId, not _currentBill
         amount: amount,
         paymentType: paymentType,
         notes: notes,
       );
 
+      // Insert payment (this handles bill and customer updates in a transaction)
       await _db.insertPayment(payment);
-      await loadBills();
 
-      // Update current bill if it's the same
-      if (_currentBill?.id == billId) {
-        _currentBill = await _db.getBillById(billId);
-      }
+      // Reload data AFTER transaction is complete
+      // Use Future.microtask to ensure transaction is fully closed
+      await Future.microtask(() async {
+        // Reload bills list
+        _bills = await _db.getAllBills();
+        _unpaidBills = await _db.getUnpaidBills();
+
+        // Update current bill if it's the same
+        if (_currentBill?.id == billId) {
+          _currentBill = await _db.getBillById(billId);
+        }
+      });
 
       notifyListeners();
       return true;
