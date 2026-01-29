@@ -38,7 +38,6 @@ class BillProvider with ChangeNotifier {
   Future<void> loadBills({int? limit}) async {
     _isLoading = true;
     _error = null;
-    notifyListeners();
 
     try {
       _bills = await _db.getAllBills(limit: limit);
@@ -53,7 +52,6 @@ class BillProvider with ChangeNotifier {
 
   Future<void> loadBillsByCustomer(String customerId) async {
     _isLoading = true;
-    notifyListeners();
 
     try {
       _bills = await _db.getBillsByCustomer(customerId);

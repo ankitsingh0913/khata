@@ -23,7 +23,6 @@ class CustomerProvider with ChangeNotifier {
   Future<void> loadCustomers() async {
     _isLoading = true;
     _error = null;
-    notifyListeners();
 
     try {
       _customers = await _db.getAllCustomers();
@@ -43,7 +42,6 @@ class CustomerProvider with ChangeNotifier {
     }
 
     _isLoading = true;
-    notifyListeners();
 
     try {
       _customers = await _db.searchCustomers(query);

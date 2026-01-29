@@ -6,19 +6,35 @@ class AuthProvider with ChangeNotifier {
   String? _shopName;
   String? _ownerName;
   String? _phone;
+  bool _isInitialized = false;
+
 
   bool get isLoggedIn => _isLoggedIn;
   String? get shopName => _shopName;
   String? get ownerName => _ownerName;
   String? get phone => _phone;
+  bool get isInitialized => _isInitialized;
+
 
   Future<void> checkLoginStatus() async {
-    final prefs = await SharedPreferences.getInstance();
-    _isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
-    _shopName = prefs.getString('shopName');
-    _ownerName = prefs.getString('ownerName');
-    _phone = prefs.getString('phone');
-    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
+      _shopName = prefs.getString('shopName');
+      _ownerName = prefs.getString('ownerName');
+      _phone = prefs.getString('phone');
+      _isInitialized = true;
+
+      debugPrint('AuthProvider: checkLoginStatus completed, isLoggedIn=$_isLoggedIn');
+
+      // Direct notify - this is called from async context, safe to use
+      notifyListeners();
+    } catch (e) {
+      debugPrint('AuthProvider error: $e');
+      _isLoggedIn = false;
+      _isInitialized = true;
+      notifyListeners();
+    }
   }
 
   Future<bool> login({
@@ -40,30 +56,44 @@ class AuthProvider with ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
+      debugPrint('AuthProvider error: $e');
       return false;
     }
   }
 
   Future<void> logout() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.clear();
-    _isLoggedIn = false;
-    _shopName = null;
-    _ownerName = null;
-    _phone = null;
-    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+
+      _isLoggedIn = false;
+      _shopName = null;
+      _ownerName = null;
+      _phone = null;
+
+      notifyListeners();
+    } catch (e) {
+      debugPrint('AuthProvider logout error: $e');
+    }
   }
 
+
   Future<void> updateShopInfo({String? shopName, String? ownerName}) async {
-    final prefs = await SharedPreferences.getInstance();
-    if (shopName != null) {
-      await prefs.setString('shopName', shopName);
-      _shopName = shopName;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      if (shopName != null) {
+        await prefs.setString('shopName', shopName);
+        _shopName = shopName;
+      }
+      if (ownerName != null) {
+        await prefs.setString('ownerName', ownerName);
+        _ownerName = ownerName;
+      }
+
+      notifyListeners();
+    } catch (e) {
+      debugPrint('AuthProvider updateShopInfo error: $e');
     }
-    if (ownerName != null) {
-      await prefs.setString('ownerName', ownerName);
-      _ownerName = ownerName;
-    }
-    notifyListeners();
   }
 }

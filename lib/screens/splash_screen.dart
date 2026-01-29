@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
-import '../Config/app_theme.dart';
-import 'Auth/login_screen.dart';
-import 'Dashboard/dashboard_screen.dart';
+import '../config/app_theme.dart';
+import 'auth/login_screen.dart';
+import 'dashboard/dashboard_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -12,7 +12,8 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
@@ -34,25 +35,47 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     );
 
     _controller.forward();
-    _checkAuth();
+
+    // Schedule auth check after build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAuthAndNavigate();
+    });
   }
 
-  Future<void> _checkAuth() async {
+  Future<void> _checkAuthAndNavigate() async {
+    // Wait for splash animation
     await Future.delayed(const Duration(seconds: 2));
-    if (!mounted) return;
-
-    final authProvider = context.read<AuthProvider>();
-    await authProvider.checkLoginStatus();
 
     if (!mounted) return;
 
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (_) => authProvider.isLoggedIn
-            ? const DashboardScreen()
-            : const LoginScreen(),
-      ),
-    );
+    try {
+      // Check auth status
+      final authProvider = context.read<AuthProvider>();
+      await authProvider.checkLoginStatus();
+
+      if (!mounted) return;
+
+      // Navigate based on login status
+      final isLoggedIn = authProvider.isLoggedIn;
+
+      debugPrint('SplashScreen: isLoggedIn = $isLoggedIn');
+
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => isLoggedIn
+              ? const DashboardScreen()
+              : const LoginScreen(),
+        ),
+      );
+    } catch (e) {
+      debugPrint('SplashScreen error: $e');
+      // On error, go to login screen
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+        );
+      }
+    }
   }
 
   @override
@@ -109,6 +132,11 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                     fontSize: 16,
                     color: Colors.white.withOpacity(0.8),
                   ),
+                ),
+                const SizedBox(height: 48),
+                const CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  strokeWidth: 2,
                 ),
               ],
             ),

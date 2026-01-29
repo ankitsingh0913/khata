@@ -20,7 +20,6 @@ class ProductProvider with ChangeNotifier {
   Future<void> loadProducts() async {
     _isLoading = true;
     _error = null;
-    notifyListeners();
 
     try {
       _products = await _db.getAllProducts();
@@ -40,7 +39,6 @@ class ProductProvider with ChangeNotifier {
     }
 
     _isLoading = true;
-    notifyListeners();
 
     try {
       _products = await _db.searchProducts(query);

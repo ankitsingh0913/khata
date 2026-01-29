@@ -11,6 +11,7 @@ class DashboardProvider with ChangeNotifier {
   List<Customer> _topCustomers = [];
   List<Bill> _recentBills = [];
   bool _isLoading = false;
+  bool _isInitialized = false;
   String? _error;
 
   Map<String, dynamic> get stats => _stats;
@@ -18,6 +19,7 @@ class DashboardProvider with ChangeNotifier {
   List<Customer> get topCustomers => _topCustomers;
   List<Bill> get recentBills => _recentBills;
   bool get isLoading => _isLoading;
+  bool get isInitialized => _isInitialized;
   String? get error => _error;
 
   double get todaySales => (_stats['todaySales'] ?? 0).toDouble();
@@ -30,9 +32,9 @@ class DashboardProvider with ChangeNotifier {
   int get lowStockCount => _stats['lowStockCount'] ?? 0;
 
   Future<void> loadDashboard() async {
+    if(_isLoading) return;
     _isLoading = true;
     _error = null;
-    notifyListeners();
 
     try {
       _stats = await _db.getDashboardStats();
@@ -42,8 +44,11 @@ class DashboardProvider with ChangeNotifier {
       _topCustomers = topCustomersData.map((map) => Customer.fromMap(map)).toList();
 
       _recentBills = (await _db.getAllBills(limit: 5)).cast<Bill>();
+      _isInitialized = true;
+      _error = null;
     } catch (e) {
       _error = e.toString();
+      debugPrint('DashboardProvider error: $e');
     }
 
     _isLoading = false;
@@ -56,6 +61,8 @@ class DashboardProvider with ChangeNotifier {
       notifyListeners();
     } catch (e) {
       _error = e.toString();
+      debugPrint('DashboardProvider error: $e');
+
     }
   }
 }
