@@ -456,47 +456,72 @@ class DatabaseService {
     final db = await database;
 
     await db.transaction((txn) async {
-      // Insert payment
+      // 1. Insert the payment record
       await txn.insert('payments', payment.toMap());
 
-      // Update bill
-      final bill = await getBillById(payment.billId);
-      if (bill != null) {
-        final newPaidAmount = bill.paidAmount + payment.amount;
-        String newStatus;
-        if (newPaidAmount >= bill.total) {
-          newStatus = AppConstants.billPaid;
-        } else if (newPaidAmount > 0) {
-          newStatus = AppConstants.billPartial;
-        } else {
-          newStatus = AppConstants.billUnpaid;
-        }
+      // 2. Get current bill info using txn (NOT db)
+      final billResult = await txn.query(
+        'bills',
+        where: 'id = ?',
+        whereArgs: [payment.billId],
+      );
 
-        await txn.update(
-          'bills',
-          {
-            'paidAmount': newPaidAmount,
-            'status': newStatus,
-            'updatedAt': DateTime.now().toIso8601String(),
-          },
+      if (billResult.isEmpty) {
+        throw Exception('Bill not found: ${payment.billId}');
+      }
+
+      final billData = billResult.first;
+      final billTotal = (billData['total'] as num?)?.toDouble() ?? 0.0;
+      final currentPaidAmount = (billData['paidAmount'] as num?)?.toDouble() ?? 0.0;
+      final customerId = billData['customerId'] as String?;
+
+      // 3. Calculate new paid amount and status
+      final newPaidAmount = currentPaidAmount + payment.amount;
+
+      String newStatus;
+      if (newPaidAmount >= billTotal) {
+        newStatus = AppConstants.billPaid;
+      } else if (newPaidAmount > 0) {
+        newStatus = AppConstants.billPartial;
+      } else {
+        newStatus = AppConstants.billUnpaid;
+      }
+
+      // 4. Update bill with new paid amount and status using txn
+      await txn.update(
+        'bills',
+        {
+          'paidAmount': newPaidAmount,
+          'status': newStatus,
+          'updatedAt': DateTime.now().toIso8601String(),
+        },
+        where: 'id = ?',
+        whereArgs: [payment.billId],
+      );
+
+      // 5. Update customer pending amount if customer exists
+      if (customerId != null) {
+        final customerResult = await txn.query(
+          'customers',
+          columns: ['pendingAmount'],
           where: 'id = ?',
-          whereArgs: [payment.billId],
+          whereArgs: [customerId],
         );
 
-        // Update customer pending amount
-        if (bill.customerId != null) {
-          final customer = await getCustomerById(bill.customerId!);
-          if (customer != null) {
-            await txn.update(
-              'customers',
-              {
-                'pendingAmount': customer.pendingAmount - payment.amount,
-                'updatedAt': DateTime.now().toIso8601String(),
-              },
-              where: 'id = ?',
-              whereArgs: [bill.customerId],
-            );
-          }
+        if (customerResult.isNotEmpty) {
+          final currentPending =
+              (customerResult.first['pendingAmount'] as num?)?.toDouble() ?? 0.0;
+          final newPending = currentPending - payment.amount;
+
+          await txn.update(
+            'customers',
+            {
+              'pendingAmount': newPending < 0 ? 0 : newPending,
+              'updatedAt': DateTime.now().toIso8601String(),
+            },
+            where: 'id = ?',
+            whereArgs: [customerId],
+          );
         }
       }
     });
