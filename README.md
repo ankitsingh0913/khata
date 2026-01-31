@@ -1,16 +1,1 @@
-# khata
-
-One app for all shops
-
-## Getting Started
-
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+<p align="center"> <img src="assets/images/logo.png" alt="Smart Shopkeeper Logo" width="120" height="120"> </p><p align="center"> <strong>A comprehensive billing and ledger management app for small businesses</strong> </p><p align="center"> <a href="#features">Features</a> • <a href="#installation">Installation</a> • <a href="#usage">Usage</a> • <a href="#documentation">Documentation</a> • <a href="#contributing">Contributing</a> • <a href="#license">License</a> </p>
