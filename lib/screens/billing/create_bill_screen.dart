@@ -15,6 +15,7 @@ import '../customers/add_customer_screen.dart';
 import '../../widgets/cash_payment_confirmation_dialog.dart';
 import 'bill_details_screen.dart';
 import 'upi_demo_payment_screen.dart';
+import 'pay_later_confirmation_screen.dart';
 
 class CreateBillScreen extends StatefulWidget {
   const CreateBillScreen({super.key});
@@ -127,9 +128,9 @@ class _CreateBillScreenState extends State<CreateBillScreen> {
             ),
             if (billProvider.selectedCustomer != null)
               _buildPaymentOption(
-                icon: Icons.account_balance_wallet,
-                title: 'Credit (Udhaar)',
-                subtitle: 'Add to customer dues',
+                icon: Icons.schedule,  // Changed from wallet icon
+                title: 'Pay Later (Udhaar)',
+                subtitle: 'Add to ${billProvider.selectedCustomer!.name}\'s dues',
                 value: AppConstants.paymentCredit,
                 selected: billProvider.paymentType == AppConstants.paymentCredit,
                 isCredit: true,
@@ -201,6 +202,7 @@ class _CreateBillScreenState extends State<CreateBillScreen> {
   Future<void> _createBill() async {
     final billProvider = context.read<BillProvider>();
 
+    // Validate cart
     if (billProvider.cartItems.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -211,121 +213,256 @@ class _CreateBillScreenState extends State<CreateBillScreen> {
       return;
     }
 
-    // ========== NEW: Handle UPI Payment ==========
-    if (billProvider.paymentType == AppConstants.paymentUpi) {
-      // Create bill first (as unpaid)
-      final bill = await billProvider.createBillForUpiPayment();
-
-      if (bill != null && mounted) {
-        // Show UPI payment screen
-        final upiResult = await UpiDemoPaymentScreen.show(
-          context,
-          bill: bill,
-        );
-
-        if (upiResult.success) {
-          // Payment successful - navigate to bill detail
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Bill ${bill.billNumber} paid successfully!'),
-              backgroundColor: AppTheme.successColor,
-            ),
-          );
-
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (_) => BillDetailScreen(
-                billId: bill.id,
-                isNewBill: true,
-              ),
-            ),
-          );
-        } else if (upiResult.cancelled) {
-          // Payment cancelled - bill remains unpaid
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Payment cancelled. Bill saved as unpaid.'),
-              backgroundColor: AppTheme.warningColor,
-            ),
-          );
-
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (_) => BillDetailScreen(
-                billId: bill.id,
-                isNewBill: true,
-              ),
-            ),
-          );
-        } else {
-          // Payment not received
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (_) => BillDetailScreen(
-                billId: bill.id,
-                isNewBill: true,
-              ),
-            ),
-          );
-        }
-      }
-      return; // Exit here for UPI flow
-    }
-    // ========== END UPI HANDLING ==========
-
-    // EXISTING CODE BELOW - DO NOT MODIFY
-    // Confirm if credit sale
+    // ==================== HANDLE UDHAAR / PAY LATER ====================
+    // Udhaar explicitly means unpaid - no confirmation needed
     if (billProvider.paymentType == AppConstants.paymentCredit) {
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('Confirm Credit Sale'),
-          content: Text(
-            'This will add ₹${billProvider.total.toStringAsFixed(0)} to ${billProvider.selectedCustomer?.name}\'s pending dues.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context, true),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.warningColor,
+      await _handlePayLaterBill();
+      return;
+    }
+
+    // ==================== HANDLE UPI PAYMENT ====================
+    if (billProvider.paymentType == AppConstants.paymentUpi) {
+      await _handleUpiPayment();
+      return;
+    }
+
+    // ==================== HANDLE CASH PAYMENT ====================
+    if (billProvider.paymentType == AppConstants.paymentCash) {
+      await _handleCashPayment();
+      return;
+    }
+
+    // ==================== HANDLE CARD AND OTHER PAYMENT TYPES ====================
+    await _handleDirectPayment();
+  }
+
+  /// Handle Pay Later / Udhaar / Credit bill creation
+  /// - No confirmation dialog needed
+  /// - Bill is automatically marked as UNPAID
+  /// - Shows Pay Later confirmation screen
+  Future<void> _handlePayLaterBill() async {
+    final billProvider = context.read<BillProvider>();
+
+    // Validate customer is selected for credit
+    if (billProvider.selectedCustomer == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select a customer for Pay Later'),
+          backgroundColor: AppTheme.errorColor,
+        ),
+      );
+      return;
+    }
+
+    // Show confirmation that it will be added to customer's dues
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppTheme.warningColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
               ),
-              child: const Text('Confirm'),
+              child: const Icon(
+                Icons.schedule,
+                color: AppTheme.warningColor,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Text('Add to Pay Later?'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'This will add ₹${billProvider.total.toStringAsFixed(0)} to ${billProvider.selectedCustomer!.name}\'s pending dues.',
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.warningColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.info_outline,
+                    size: 18,
+                    color: AppTheme.warningColor,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Bill will be marked as unpaid',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppTheme.warningColor,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
-      );
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.warningColor,
+            ),
+            child: const Text('Add to Pay Later'),
+          ),
+        ],
+      ),
+    );
 
-      if (confirmed != true) return;
-    }
+    if (confirmed != true) return;
 
-    // Create the bill
+    // Create the bill (it's already marked as UNPAID in createBill for credit type)
     final bill = await billProvider.createBill();
 
     if (bill != null && mounted) {
-      // Cash Payment Confirmation (existing code - DO NOT MODIFY)
-      if (billProvider.paymentType == AppConstants.paymentCash) {
-        final cashStatus = await CashPaymentConfirmationDialog.show(
-          context,
-          amount: bill.total,
-          billNumber: bill.billNumber,
+      // Navigate to Pay Later confirmation screen
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PayLaterConfirmationScreen(bill: bill),
+        ),
+      );
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(billProvider.error ?? 'Failed to create bill'),
+          backgroundColor: AppTheme.errorColor,
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleUpiPayment() async {
+    final billProvider = context.read<BillProvider>();
+
+    // Create bill first (as unpaid)
+    final bill = await billProvider.createBillForUpiPayment();
+
+    if (bill != null && mounted) {
+      // Show UPI payment screen
+      final upiResult = await UpiDemoPaymentScreen.show(
+        context,
+        bill: bill,
+      );
+
+      if (upiResult.success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Bill ${bill.billNumber} paid successfully!'),
+            backgroundColor: AppTheme.successColor,
+          ),
         );
 
-        if (cashStatus == CashPaymentStatus.notPaid) {
-          await billProvider.updateBillPaymentStatus(
-            billId: bill.id,
-            isPaid: false,
-          );
-        }
-      }
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => BillDetailScreen(
+              billId: bill.id,
+              isNewBill: true,
+            ),
+          ),
+        );
+      } else {
+        // Payment cancelled or failed - bill remains unpaid
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              upiResult.cancelled
+                  ? 'Payment cancelled. Bill saved as unpaid.'
+                  : 'Payment not received. Bill saved as unpaid.',
+            ),
+            backgroundColor: AppTheme.warningColor,
+          ),
+        );
 
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => BillDetailScreen(
+              billId: bill.id,
+              isNewBill: true,
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleCashPayment() async {
+    final billProvider = context.read<BillProvider>();
+
+    // Create the bill first
+    final bill = await billProvider.createBill();
+
+    if (bill != null && mounted) {
+      // Show cash confirmation dialog
+      final cashStatus = await CashPaymentConfirmationDialog.show(
+        context,
+        amount: bill.total,
+        billNumber: bill.billNumber,
+      );
+
+      // Update status based on user selection
+      if (cashStatus == CashPaymentStatus.notPaid) {
+        await billProvider.updateBillPaymentStatus(
+          billId: bill.id,
+          isPaid: false,
+        );
+      }
+      // If paid or cancelled, status remains as set during creation
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              cashStatus == CashPaymentStatus.paid
+                  ? 'Bill ${bill.billNumber} created successfully!'
+                  : 'Bill ${bill.billNumber} saved as unpaid.',
+            ),
+            backgroundColor: cashStatus == CashPaymentStatus.paid
+                ? AppTheme.successColor
+                : AppTheme.warningColor,
+          ),
+        );
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => BillDetailScreen(
+              billId: bill.id,
+              isNewBill: true,
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleDirectPayment() async {
+    final billProvider = context.read<BillProvider>();
+
+    final bill = await billProvider.createBill();
+
+    if (bill != null && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Bill ${bill.billNumber} created successfully!'),
@@ -340,6 +477,13 @@ class _CreateBillScreenState extends State<CreateBillScreen> {
             billId: bill.id,
             isNewBill: true,
           ),
+        ),
+      );
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(billProvider.error ?? 'Failed to create bill'),
+          backgroundColor: AppTheme.errorColor,
         ),
       );
     }

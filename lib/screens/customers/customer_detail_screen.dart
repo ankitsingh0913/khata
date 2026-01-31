@@ -30,7 +30,9 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _loadCustomerData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadCustomerData();
+    });
   }
 
   @override
