@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🏪 Dukaan Ledger — Smart Shopkeeper Billing & Udhaar App
+# 🏪 khata — Smart Shopkeeper Billing & Udhaar App
 
 **A powerful yet simple app built for small shopkeepers to manage bills, customers, and loans — all in one place.**
 
