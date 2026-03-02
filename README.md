@@ -124,7 +124,7 @@ Track every sale, manage customer credit (udhaar), generate PDF bills, and share
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/dukaan-ledger.git
+git clone https://github.com/ankitsingh0913/khata.git
 cd dukaan-ledger/flutter_app
 
 # Install dependencies
@@ -136,7 +136,7 @@ flutter run
 
 Configure your backend URL in `lib/config/app_config.dart`:
 ```dart
-const String baseUrl = 'http://your-server-ip:8080/api';
+const String baseUrl = 'http://localhost:8080/api/v1';
 ```
 
 ---
@@ -171,25 +171,57 @@ CREATE DATABASE dukaan_db;
 ## 📁 Project Structure
 
 ```
-dukaan-ledger/
-├── flutter_app/               # Flutter frontend
-│   ├── lib/
-│   │   ├── screens/           # UI screens
-│   │   ├── models/            # Data models
-│   │   ├── services/          # API & local DB services
-│   │   ├── widgets/           # Reusable UI components
-│   │   └── config/            # App configuration
-│   └── pubspec.yaml
-│
-├── backend/                   # Spring Boot backend
-│   ├── src/main/java/
-│   │   ├── controllers/       # REST controllers
-│   │   ├── services/          # Business logic
-│   │   ├── models/            # JPA entities
-│   │   └── repositories/      # Data repositories
-│   └── pom.xml
-│
-└── README.md
+lib/
+├── main.dart
+├── config/
+│   ├── app_theme.dart
+│   └── app_constants.dart
+├── models/
+│   ├── customer.dart
+│   ├── product.dart
+│   ├── bill.dart
+│   ├── bill_item.dart
+│   ├── payment.dart
+│   └── shop.dart
+├── services/
+│   ├── database_service.dart
+│   ├── auth_service.dart
+│   ├── pdf_service.dart
+│   └── share_service.dart
+├── providers/
+│   ├── auth_provider.dart
+│   ├── customer_provider.dart
+│   ├── product_provider.dart
+│   ├── bill_provider.dart
+│   └── dashboard_provider.dart
+├── screens/
+│   ├── splash_screen.dart
+│   ├── auth/
+│   │   ├── login_screen.dart
+│   │   └── otp_screen.dart
+│   ├── dashboard/
+│   │   └── dashboard_screen.dart
+│   ├── customers/
+│   │   ├── customer_list_screen.dart
+│   │   ├── customer_detail_screen.dart
+│   │   └── add_customer_screen.dart
+│   ├── products/
+│   │   ├── product_list_screen.dart
+│   │   └── add_product_screen.dart
+│   ├── billing/
+│   │   ├── create_bill_screen.dart
+│   │   ├── bill_detail_screen.dart
+│   │   └── bill_history_screen.dart
+│   └── loans/
+│       ├── loan_dashboard_screen.dart
+│       └── payment_screen.dart
+└── widgets/
+    ├── custom_button.dart
+    ├── custom_text_field.dart
+    ├── stat_card.dart
+    ├── customer_card.dart
+    ├── product_card.dart
+    └── bill_card.dart
 ```
 
 ---
