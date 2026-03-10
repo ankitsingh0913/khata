@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../providers/customer_provider.dart';
-import '../../config/app_theme.dart';
-import '../../widgets/custom_text_field.dart';
-import '../../widgets/customer_card.dart';
-import 'add_customer_screen.dart';
-import 'customer_detail_screen.dart';
+import 'package:khata/providers/customer_provider.dart';
+import 'package:khata/config/app_theme.dart';
+import 'package:khata/widgets/custom_text_field.dart';
+import 'package:khata/widgets/customer_card.dart';
+import 'package:khata/screens/customers/add_customer_screen.dart';
+import 'package:khata/screens/customers/customer_detail_screen.dart';
 
 class CustomerListScreen extends StatefulWidget {
   const CustomerListScreen({super.key});
@@ -19,9 +19,29 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
   final _searchController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+
+    Future.microtask(() {
+      context.read<CustomerProvider>().loadCustomers();
+    });
+  }
+  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _openAddCustomer() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const AddCustomerScreen()),
+    );
+
+    // reload after adding customer
+    if (mounted) {
+      context.read<CustomerProvider>().loadCustomers();
+    }
   }
 
   Future<void> _makeCall(String phone) async {

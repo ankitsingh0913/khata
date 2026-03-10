@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:khata/core/api/api_client.dart';
 import 'package:khata/providers/auth_provider.dart';
 import 'package:khata/providers/bill_provider.dart';
 import 'package:khata/providers/customer_provider.dart';
@@ -13,6 +14,8 @@ import 'Screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await ApiClient.init();
+
 
   // Initialize database
   await DatabaseService.instance.database;

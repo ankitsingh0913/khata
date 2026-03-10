@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:khata/screens/auth/otp_screen.dart';
+import 'package:khata/screens/auth/signup_screen.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../config/app_theme.dart';
@@ -22,6 +23,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _shopNameController = TextEditingController();
   final _ownerNameController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
   bool _isLoading = false;
 
   @override
@@ -29,6 +32,8 @@ class _LoginScreenState extends State<LoginScreen> {
     _shopNameController.dispose();
     _ownerNameController.dispose();
     _phoneController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
@@ -66,9 +71,8 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     final success = await context.read<AuthProvider>().login(
-      phone: _phoneController.text,
-      shopName: _shopNameController.text,
-      ownerName: _ownerNameController.text,
+      email: _emailController.text,
+      password: _passwordController.text,
     );
 
     if (!mounted) return;
@@ -78,6 +82,23 @@ class _LoginScreenState extends State<LoginScreen> {
     if (success) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const DashboardScreen()),
+      );
+    } else {
+      // Show alert for incorrect credentials
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Login Failed'),
+            content: const Text('Email or password is incorrect. Please try again.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          );
+        },
       );
     }
   }
@@ -136,13 +157,17 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 // Shop Name
                 CustomTextField(
-                  label: 'Shop Name',
-                  hint: 'Enter your shop name',
-                  controller: _shopNameController,
-                  prefixIcon: const Icon(Icons.store_outlined),
+                  label: 'Email',
+                  hint: 'Enter your email',
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  prefixIcon: const Icon(Icons.email_outlined),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Please enter shop name';
+                      return 'Please enter email';
+                    }
+                    if (!value.contains('@')) {
+                      return 'Please enter valid email';
                     }
                     return null;
                   },
@@ -151,50 +176,54 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 // Owner Name
                 CustomTextField(
-                  label: 'Owner Name',
-                  hint: 'Enter your name',
-                  controller: _ownerNameController,
-                  prefixIcon: const Icon(Icons.person_outline),
+                  label: 'Password',
+                  hint: 'Enter your password',
+                  controller: _passwordController,
+                  obscureText: true,
+                  prefixIcon: const Icon(Icons.lock_outline),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Please enter owner name';
+                      return 'Please enter password';
+                    }
+                    if (value.length < 6) {
+                      return 'Password must be at least 6 characters';
                     }
                     return null;
                   },
                 ),
                 const SizedBox(height: 20),
 
-                // Phone Number
-                CustomTextField(
-                  label: 'Phone Number',
-                  hint: 'Enter phone number',
-                  controller: _phoneController,
-                  keyboardType: TextInputType.phone,
-                  prefixIcon: const Icon(Icons.phone_outlined),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter phone number';
-                    }
-                    if (value.length < 10) {
-                      return 'Please enter valid phone number';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 40),
 
                 // Login Button
                 CustomButton(
                   text: 'Get Started',
                   isLoading: _isLoading,
-                  onPressed:
+                  onPressed: _handleLogin,
                   // _handleLogin,
-                  (){
-                    Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(builder: (_) => OtpScreen(phone: _phoneController.text, shopName: _shopNameController.text, ownerName: _ownerNameController.text)),
-                    );
-                  },
+                  // (){
+                  //   _handleLogin();
+                  // },
                   icon: Icons.arrow_forward_rounded,
+                ),
+                const SizedBox(height: 16),
+                Center(
+                  child: GestureDetector(
+                    child: Text(
+                      'Create a new Account',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppTheme.primaryColor,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    onTap: (){
+                      Navigator.of(context).pushReplacement(
+                        MaterialPageRoute(builder: (_) =>
+                            SignupScreen()
+                        )
+                      );
+                    },
+                  ),
                 ),
                 const SizedBox(height: 8),
                 SocialLoginButtonsSection(

@@ -48,6 +48,11 @@ dependencies:
   qr_flutter:
   crypto:
 
+  dio: ^5.4.0
+  get: ^4.6.6
+  flutter_secure_storage: ^9.0.0
+  http:
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

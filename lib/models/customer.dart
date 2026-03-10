@@ -22,6 +22,20 @@ class Customer {
   })  : createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now();
 
+  factory Customer.fromJson(Map<String, dynamic> json) {
+    return Customer(
+      id: json["id"],
+      name: json["name"],
+      phone: json["phone"],
+      email: json["email"],
+      address: json["address"],
+      totalPurchase: (json["totalPurchase"] ?? 0).toDouble(),
+      pendingAmount: (json["pendingAmount"] ?? 0).toDouble(),
+      createdAt: DateTime.parse(json["createdAt"]),
+      updatedAt: DateTime.parse(json["updatedAt"]),
+    );
+  }
+
   Map<String, dynamic> toMap() {
     return {
       'id': id,

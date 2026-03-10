@@ -8,15 +8,13 @@ import '../../widgets/custom_button.dart';
 import '../dashboard/dashboard_screen.dart';
 
 class OtpScreen extends StatefulWidget {
-  final String phone;
-  final String shopName;
-  final String ownerName;
+  final String email;
+  final String password;
 
   const OtpScreen({
     super.key,
-    required this.phone,
-    required this.shopName,
-    required this.ownerName,
+    required this.email,
+    required this.password,
   });
 
   @override
@@ -108,9 +106,8 @@ class _OtpScreenState extends State<OtpScreen> {
 
     // For demo purposes, accept any 6-digit OTP
     final success = await context.read<AuthProvider>().login(
-      phone: widget.phone,
-      shopName: widget.shopName,
-      ownerName: widget.ownerName,
+      email: widget.email,
+      password: widget.password,
     );
 
     setState(() => _isLoading = false);
@@ -148,7 +145,7 @@ class _OtpScreenState extends State<OtpScreen> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('OTP sent to ${widget.phone}'),
+          content: Text('OTP sent to ${widget.email}'),
           backgroundColor: AppTheme.successColor,
         ),
       );
@@ -195,7 +192,7 @@ class _OtpScreenState extends State<OtpScreen> {
               Row(
                 children: [
                   Text(
-                    widget.phone,
+                    widget.email,
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,

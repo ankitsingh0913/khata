@@ -1,4 +1,6 @@
 import 'package:flutter/foundation.dart';
+import 'package:khata/core/storage/token_storage.dart';
+import 'package:khata/services/auth_api_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthProvider with ChangeNotifier {
@@ -38,12 +40,59 @@ class AuthProvider with ChangeNotifier {
   }
 
   Future<bool> login({
-    required String phone,
-    required String shopName,
-    required String ownerName,
+    required String email,
+    required String password,
   }) async {
     try {
+
+      final result = await AuthApiService.login(
+        email: email,
+        password: password,
+      );
+
+      if (result == null) return false;
+
+      await TokenStorage.saveAccessToken(result["accessToken"]);
+      await TokenStorage.saveRefreshToken(result["refreshToken"]);
+      print(result);
+
       final prefs = await SharedPreferences.getInstance();
+
+      await prefs.setBool('isLoggedIn', true);
+
+      _isLoggedIn = true;
+
+      notifyListeners();
+
+      return true;
+
+    } catch (e) {
+      debugPrint('Login error: $e');
+      return false;
+    }
+  }
+
+  Future<bool> signup({
+    required String shopName,
+    required String ownerName,
+    required String phone,
+    required String email,
+    required String password,
+  }) async {
+    try {
+
+      final result = await AuthApiService.signup(
+        shopName: shopName,
+        ownerName: ownerName,
+        phone: phone,
+        email: email,
+        password: password,
+      );
+
+      if (result == null) return false;
+
+      final prefs = await SharedPreferences.getInstance();
+
       await prefs.setBool('isLoggedIn', true);
       await prefs.setString('shopName', shopName);
       await prefs.setString('ownerName', ownerName);
@@ -53,10 +102,13 @@ class AuthProvider with ChangeNotifier {
       _shopName = shopName;
       _ownerName = ownerName;
       _phone = phone;
+
       notifyListeners();
+
       return true;
+
     } catch (e) {
-      debugPrint('AuthProvider error: $e');
+      debugPrint("Signup error: $e");
       return false;
     }
   }

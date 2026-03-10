@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../models/customer.dart';
-import '../../providers/customer_provider.dart';
-import '../../providers/bill_provider.dart';
-import '../../config/app_theme.dart';
-import '../../config/app_constants.dart';
-import '../../widgets/bill_card.dart';
-import '../../widgets/custom_button.dart';
-import '../../services/share_service.dart';
-import '../billing/bill_details_screen.dart';
-import '../loans/payment_screen.dart';
+import 'package:khata/models/customer.dart';
+import 'package:khata/providers/customer_provider.dart';
+import 'package:khata/providers/bill_provider.dart';
+import 'package:khata/config/app_theme.dart';
+import 'package:khata/config/app_constants.dart';
+import 'package:khata/widgets/bill_card.dart';
+import 'package:khata/widgets/custom_button.dart';
+import 'package:khata/services/share_service.dart';
+import 'package:khata/screens/billing/bill_details_screen.dart';
+import 'package:khata/screens/loans/payment_screen.dart';
 
 class CustomerDetailScreen extends StatefulWidget {
   final Customer customer;
