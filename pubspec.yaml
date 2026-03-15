@@ -44,7 +44,7 @@ dependencies:
   cupertino_icons: ^1.0.6
   iconsax: ^0.0.8
 
-  razorpay_flutter:
+#  razorpay_flutter:
   qr_flutter:
   crypto:
 

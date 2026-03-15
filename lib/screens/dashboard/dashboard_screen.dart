@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import '../../providers/auth_provider.dart';
+import 'package:khata/providers/auth_provider.dart';
 import '../../providers/bill_provider.dart';
 import '../../providers/dashboard_provider.dart';
 import '../../providers/customer_provider.dart';
@@ -35,12 +35,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _loadData() async {
-    await Future.wait([
-      context.read<DashboardProvider>().loadDashboard(),
-      context.read<CustomerProvider>().loadCustomers(),
-      context.read<ProductProvider>().loadProducts(),
-      context.read<BillProvider>().loadBills(limit: 10),
-    ]);
+    try {
+      await Future.wait([
+        context.read<DashboardProvider>().loadDashboard(),
+        context.read<CustomerProvider>().loadCustomers(),
+        context.read<ProductProvider>().loadProducts(),
+        context.read<BillProvider>().loadBills(limit: 10),
+      ]);
+    } catch (e) {
+      debugPrint("Dashboard load error: $e");
+    }
   }
 
   @override
@@ -58,12 +62,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
       bottomNavigationBar: _buildBottomNav(),
-      floatingActionButton: _currentIndex == 0 ? FloatingActionButton.extended(
-        onPressed: () {
-          setState(() => _currentIndex = 2);
-        },
-        icon: const Icon(Icons.add),
-        label: const Text('New Bill'),
+      floatingActionButton: _currentIndex != 2
+          ? FloatingActionButton.extended(
+            onPressed: () {
+              setState(() => _currentIndex = 2);
+            },
+          icon: const Icon(Icons.add),
+          label: const Text('New Bill'),
       ) : null,
     );
   }

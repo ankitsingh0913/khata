@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import '../../models/product.dart';
-import '../../providers/product_provider.dart';
-import '../../config/app_theme.dart';
-import '../../widgets/custom_button.dart';
-import '../../widgets/custom_text_field.dart';
+import 'package:khata/models/product.dart';
+import 'package:khata/providers/product_provider.dart';
+import 'package:khata/config/app_theme.dart';
+import 'package:khata/widgets/custom_button.dart';
+import 'package:khata/widgets/custom_text_field.dart';
 
 class AddProductScreen extends StatefulWidget {
   final Product? product; // For editing
@@ -112,7 +112,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
           backgroundColor: AppTheme.successColor,
         ),
       );
-      Navigator.pop(context);
+      Navigator.pop(context, provider);
     }
   }
 

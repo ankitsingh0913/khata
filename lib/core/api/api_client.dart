@@ -10,6 +10,10 @@ class ApiClient {
       baseUrl: baseUrl,
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 10),
+
+      validateStatus: (status) {
+        return status != null && status < 500;
+      },
     ),
   );
 
@@ -23,61 +27,63 @@ class ApiClient {
 
     dio.interceptors.add(
       InterceptorsWrapper(
+
         onRequest: (options, handler) async {
+
           final token = await TokenStorage.getAccessToken();
+          print("TOKEN SENT -> $token");
 
           if (token != null) {
             options.headers["Authorization"] = "Bearer $token";
           }
+
           handler.next(options);
         },
 
-        onError: (error, handler) async {
+        onResponse: (response, handler) async {
 
-          if (error.response?.statusCode != 401) {
-            return handler.next(error);
-          }
+          print("RESPONSE STATUS -> ${response.statusCode}");
 
-          final request = error.requestOptions;
-          _retryQueue.add(request);
+          if (response.statusCode == 401 || response.statusCode == 403) {
 
-          if (_isRefreshing) {
-            return;
-          }
-
-          _isRefreshing = true;
-
-          try {
+            print("REFRESH TRIGGERED");
 
             final refreshToken = await TokenStorage.getRefreshToken();
 
             if (refreshToken == null) {
+              return handler.next(response);
+            }
+
+            try {
+
+              final refreshResponse = await _refreshDio.post(
+                "$baseUrl/auth/refresh",
+                data: {"refreshToken": refreshToken},
+              );
+
+              final newAccess = refreshResponse.data["accessToken"];
+              final newRefresh = refreshResponse.data["refreshToken"];
+
+              await TokenStorage.saveAccessToken(newAccess);
+              await TokenStorage.saveRefreshToken(newRefresh);
+
+              final requestOptions = response.requestOptions;
+
+              requestOptions.headers["Authorization"] = "Bearer $newAccess";
+
+              final retryResponse = await dio.fetch(requestOptions);
+
+              return handler.resolve(retryResponse);
+
+            } catch (e) {
+
               await TokenStorage.clear();
-              return handler.next(error);
+
+              return handler.next(response);
             }
-
-            final response = await _refreshDio.post(
-              "$baseUrl/auth/refresh",
-              data: {
-                "refreshToken": refreshToken
-              },
-            );
-
-            final newAccessToken = response.data["accessToken"];
-            await TokenStorage.saveAccessToken(newAccessToken);
-
-            for (final req in _retryQueue) {
-              req.headers["Authorization"] = "Bearer $newAccessToken";
-              dio.fetch(req);
-            }
-
-            _retryQueue.clear();
-
-          } catch (e) {
-            await TokenStorage.clear();
-          } finally {
-            _isRefreshing = false;
           }
+
+          handler.next(response);
         },
       ),
     );

@@ -561,21 +561,21 @@ class DatabaseService {
 
     // Today's sales
     final todaySales = await db.rawQuery('''
-      SELECT COALESCE(SUM(total), 0) as total, COUNT(*) as count 
-      FROM bills 
+      SELECT COALESCE(SUM(total), 0) as total, COUNT(*) as count
+      FROM bills
       WHERE createdAt >= ?
     ''', [startOfDay.toIso8601String()]);
 
     // Monthly sales
     final monthlySales = await db.rawQuery('''
-      SELECT COALESCE(SUM(total), 0) as total, COUNT(*) as count 
-      FROM bills 
+      SELECT COALESCE(SUM(total), 0) as total, COUNT(*) as count
+      FROM bills
       WHERE createdAt >= ?
     ''', [startOfMonth.toIso8601String()]);
 
     // Total pending
     final pendingResult = await db.rawQuery('''
-      SELECT COALESCE(SUM(pendingAmount), 0) as total 
+      SELECT COALESCE(SUM(pendingAmount), 0) as total
       FROM customers
     ''');
 
@@ -632,8 +632,8 @@ class DatabaseService {
       final endOfDay = startOfDay.add(const Duration(days: 1));
 
       final result = await db.rawQuery('''
-        SELECT COALESCE(SUM(total), 0) as total 
-        FROM bills 
+        SELECT COALESCE(SUM(total), 0) as total
+        FROM bills
         WHERE createdAt >= ? AND createdAt < ?
       ''', [startOfDay.toIso8601String(), endOfDay.toIso8601String()]);
 

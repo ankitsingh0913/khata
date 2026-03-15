@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:khata/core/storage/token_storage.dart';
-import 'package:khata/services/auth_api_service.dart';
+import 'package:khata/services/api_services/auth_api_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthProvider with ChangeNotifier {
@@ -20,19 +20,24 @@ class AuthProvider with ChangeNotifier {
 
   Future<void> checkLoginStatus() async {
     try {
+      final accessToken = await TokenStorage.getAccessToken();
+      final refreshToken = await TokenStorage.getRefreshToken();
+
       final prefs = await SharedPreferences.getInstance();
-      _isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
-      _shopName = prefs.getString('shopName');
-      _ownerName = prefs.getString('ownerName');
-      _phone = prefs.getString('phone');
+
+      if (accessToken != null && refreshToken != null) {
+        _isLoggedIn = true;
+        _shopName = prefs.getString('shopName');
+        _ownerName = prefs.getString('ownerName');
+        _phone = prefs.getString('phone');
+      } else {
+        _isLoggedIn = false;
+      }
+
       _isInitialized = true;
 
-      debugPrint('AuthProvider: checkLoginStatus completed, isLoggedIn=$_isLoggedIn');
-
-      // Direct notify - this is called from async context, safe to use
       notifyListeners();
     } catch (e) {
-      debugPrint('AuthProvider error: $e');
       _isLoggedIn = false;
       _isInitialized = true;
       notifyListeners();
@@ -117,6 +122,7 @@ class AuthProvider with ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.clear();
+      await TokenStorage.clear();
 
       _isLoggedIn = false;
       _shopName = null;

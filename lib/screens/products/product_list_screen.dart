@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:khata/models/product.dart';
 import 'package:provider/provider.dart';
-import '../../Config/app_constants.dart';
-import '../../providers/product_provider.dart';
-import '../../config/app_theme.dart';
-import '../../widgets/custom_text_field.dart';
-import '../../widgets/product_card.dart';
+import 'package:khata/Config/app_constants.dart';
+import 'package:khata/providers/product_provider.dart';
+import 'package:khata/config/app_theme.dart';
+import 'package:khata/widgets/custom_text_field.dart';
+import 'package:khata/widgets/product_card.dart';
 import 'add_product_screen.dart';
 
 class ProductListScreen extends StatefulWidget {
@@ -18,6 +19,15 @@ class ProductListScreen extends StatefulWidget {
 class _ProductListScreenState extends State<ProductListScreen> {
   final _searchController = TextEditingController();
   String _selectedFilter = 'All';
+
+  @override
+  void initState() {
+    super.initState();
+
+    Future.microtask(() {
+      context.read<ProductProvider>().loadProducts();
+    });
+  }
 
   @override
   void dispose() {
@@ -207,7 +217,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
 }
 
 class ProductDetailSheet extends StatelessWidget {
-  final dynamic product;
+  final Product product;
 
   const ProductDetailSheet({super.key, required this.product});
 
