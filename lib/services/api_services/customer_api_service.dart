@@ -9,9 +9,6 @@ class CustomerApiService {
     final response = await ApiClient.dio.get("/customers");
     List data = response.data;
 
-
-    print(response.data);
-
     return data.map((e) => Customer.fromJson(e)).toList();
   }
 

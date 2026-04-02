@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:khata/services/api_services/dashboard_api_service.dart';
 import '../models/customer.dart';
 import '../models/bill.dart';
 import '../services/database_service.dart';
@@ -32,37 +33,39 @@ class DashboardProvider with ChangeNotifier {
   int get lowStockCount => _stats['lowStockCount'] ?? 0;
 
   Future<void> loadDashboard() async {
-    if(_isLoading) return;
+    if (_isLoading) return;
     _isLoading = true;
     _error = null;
-
+    notifyListeners();
     try {
-      _stats = await _db.getDashboardStats();
-      _salesChartData = await _db.getSalesChart(days: 7);
+      final data = await DashboardApiService.getDashboard();
+      _stats = data["stats"] ?? {};
+      _salesChartData = List<Map<String, dynamic>>.from(data["salesChart"] ?? []);
+      _topCustomers = (data["topCustomers"] as List? ?? [])
+          .map((e) => Customer.fromJson(e))
+          .toList();
 
-      final topCustomersData = await _db.getTopCustomers(limit: 5);
-      _topCustomers = topCustomersData.map((map) => Customer.fromMap(map)).toList();
+      _recentBills = (data["recentBills"] as List? ?? [])
+          .map((e) => Bill.fromJson(e))
+          .toList();
 
-      _recentBills = (await _db.getAllBills(limit: 5)).cast<Bill>();
       _isInitialized = true;
-      _error = null;
     } catch (e) {
       _error = e.toString();
-      debugPrint('DashboardProvider error: $e');
+      debugPrint("DashboardProvider error: $e");
     }
-
     _isLoading = false;
     notifyListeners();
   }
 
   Future<void> refreshStats() async {
     try {
-      _stats = await _db.getDashboardStats();
+      final stats = await DashboardApiService.getStats();
+      _stats = stats;
       notifyListeners();
     } catch (e) {
       _error = e.toString();
-      debugPrint('DashboardProvider error: $e');
-
+      debugPrint("DashboardProvider refresh error: $e");
     }
   }
 }

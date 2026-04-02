@@ -63,6 +63,27 @@ class Bill {
     };
   }
 
+  factory Bill.fromJson(Map<String, dynamic> json){
+    return Bill(
+      id: json["id"],
+      billNumber: json["billNumber"],
+      customerId: json["customerId"],
+      customerName: json["customerName"],
+      customerPhone: json["customerPhone"],
+      items: json["items"] != null ? List<BillItem>.from((json["items"] as List).map((x) => BillItem.fromJson(x))) : [],
+      subtotal: (json["subtotal"] ?? 0).toDouble(),
+      discount: (json["discount"] ?? 0).toDouble(),
+      tax: (json["tax"] ?? 0).toDouble(),
+      total: (json["total"] ?? 0).toDouble(),
+      paidAmount: (json["paidAmount"] ?? 0).toDouble(),
+      paymentType: json["paymentType"] ?? AppConstants.paymentCash,
+      status: json["status"] ?? AppConstants.billUnpaid,
+      notes: json["notes"],
+      createdAt: json["createdAt"] != null ? DateTime.parse(json["createdAt"]) : DateTime.now(),
+      updatedAt: json["updatedAt"] != null ? DateTime.parse(json["updatedAt"]) : DateTime.now(),
+    );
+  }
+
   factory Bill.fromMap(Map<String, dynamic> map, {List<BillItem>? items}) {
     return Bill(
       id: map['id'],

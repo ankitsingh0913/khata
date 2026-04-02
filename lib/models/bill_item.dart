@@ -43,6 +43,18 @@ class BillItem {
     );
   }
 
+  factory BillItem.fromJson(Map<String, dynamic> json) {
+    return BillItem(
+      id: json['id'],
+      billId: json['billId'],
+      productId: json['productId'],
+      productName: json['productName'],
+      price: (json['price'] ?? 0).toDouble(),
+      quantity: json['quantity'] ?? 1,
+      discount: (json['discount'] ?? 0).toDouble(),
+    );
+  }
+
   BillItem copyWith({
     String? id,
     String? billId,

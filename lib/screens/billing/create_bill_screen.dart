@@ -2,17 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:khata/widgets/quick_add_customer_dialog.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import '../../models/product.dart';
-import '../../models/customer.dart';
-import '../../providers/bill_provider.dart';
-import '../../providers/product_provider.dart';
-import '../../providers/customer_provider.dart';
-import '../../config/app_theme.dart';
-import '../../config/app_constants.dart';
-import '../../widgets/custom_button.dart';
-import '../../widgets/custom_text_field.dart';
-import '../customers/add_customer_screen.dart';
-import '../../widgets/cash_payment_confirmation_dialog.dart';
+import 'package:khata/models/product.dart';
+import 'package:khata/models/customer.dart';
+import 'package:khata/providers/bill_provider.dart';
+import 'package:khata/providers/product_provider.dart';
+import 'package:khata/providers/customer_provider.dart';
+import 'package:khata/config/app_theme.dart';
+import 'package:khata/config/app_constants.dart';
+import 'package:khata/widgets/custom_button.dart';
+import 'package:khata/widgets/custom_text_field.dart';
+import 'package:khata/screens/customers/add_customer_screen.dart';
+import 'package:khata/widgets/cash_payment_confirmation_dialog.dart';
 import 'bill_details_screen.dart';
 import 'upi_demo_payment_screen.dart';
 import 'pay_later_confirmation_screen.dart';
@@ -331,14 +331,14 @@ class _CreateBillScreenState extends State<CreateBillScreen> {
     if (confirmed != true) return;
 
     // Create the bill (it's already marked as UNPAID in createBill for credit type)
-    final bill = await billProvider.createBill();
+    final bills = await billProvider.createBill();
 
-    if (bill != null && mounted) {
+    if (bills != null && mounted) {
       // Navigate to Pay Later confirmation screen
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => PayLaterConfirmationScreen(bill: bill),
+          builder: (_) => PayLaterConfirmationScreen(bill: bills),
         ),
       );
     } else if (mounted) {

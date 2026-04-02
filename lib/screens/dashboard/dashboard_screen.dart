@@ -2,19 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:khata/providers/auth_provider.dart';
-import '../../providers/bill_provider.dart';
-import '../../providers/dashboard_provider.dart';
-import '../../providers/customer_provider.dart';
-import '../../config/app_theme.dart';
-import '../../config/app_constants.dart';
-import '../../providers/product_provider.dart';
-import '../../widgets/set_card.dart';
-import '../../widgets/bill_card.dart';
-import '../customers/customer_list_screen.dart';
-import '../products/product_list_screen.dart';
-import '../billing/create_bill_screen.dart';
-import '../billing/bill_history_screen.dart';
-import '../loans/loan_dashboard_screen.dart';
+import 'package:khata/providers/bill_provider.dart';
+import 'package:khata/providers/dashboard_provider.dart';
+import 'package:khata/providers/customer_provider.dart';
+import 'package:khata/config/app_theme.dart';
+import 'package:khata/config/app_constants.dart';
+import 'package:khata/providers/product_provider.dart';
+import 'package:khata/widgets/set_card.dart';
+import 'package:khata/widgets/bill_card.dart';
+import 'package:khata/screens/customers/customer_list_screen.dart';
+import 'package:khata/screens/products/product_list_screen.dart';
+import 'package:khata/screens/billing/create_bill_screen.dart';
+import 'package:khata/screens/billing/bill_history_screen.dart';
+import 'package:khata/screens/loans/loan_dashboard_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final int initialTab;
@@ -64,17 +64,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
       bottomNavigationBar: _buildBottomNav(),
       floatingActionButton: _currentIndex != 2
           ? FloatingActionButton.extended(
-            onPressed: () {
-              setState(() => _currentIndex = 2);
-            },
-          icon: const Icon(Icons.add),
-          label: const Text('New Bill'),
-      ) : null,
+              onPressed: () {
+                setState(() => _currentIndex = 2);
+              },
+              icon: const Icon(Icons.add),
+              label: const Text('New Bill'),
+            )
+          : null,
     );
   }
 
   Widget _buildHomeTab() {
-    final currencyFormat = NumberFormat.currency(symbol: AppConstants.currency, decimalDigits: 0);
+    final currencyFormat =
+        NumberFormat.currency(symbol: AppConstants.currency, decimalDigits: 0);
     return Consumer<DashboardProvider>(
       builder: (context, dashboard, _) {
         final auth = context.watch<AuthProvider>();
@@ -149,7 +151,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const LoanDashboardScreen()),
+                          MaterialPageRoute(
+                              builder: (_) => const LoanDashboardScreen()),
                         );
                       },
                     ),
@@ -207,7 +210,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             onTap: () {
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (_) => const BillHistoryScreen()),
+                                MaterialPageRoute(
+                                    builder: (_) => const BillHistoryScreen()),
                               );
                             },
                           ),
@@ -219,7 +223,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             onTap: () {
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (_) => const LoanDashboardScreen()),
+                                MaterialPageRoute(
+                                    builder: (_) =>
+                                        const LoanDashboardScreen()
+                                ),
                               );
                             },
                           ),
@@ -249,7 +256,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         onPressed: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => const BillHistoryScreen()),
+                            MaterialPageRoute(
+                                builder: (_) => const BillHistoryScreen()),
                           );
                         },
                         child: const Text('See All'),
@@ -263,12 +271,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 builder: (context, billProvider, _) {
                   if (billProvider.isLoading) {
                     return const SliverFillRemaining(
+                      hasScrollBody: false,
                       child: Center(child: CircularProgressIndicator()),
                     );
                   }
 
                   if (billProvider.bills.isEmpty) {
                     return SliverFillRemaining(
+                      hasScrollBody: false,
                       child: Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -303,7 +313,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     sliver: SliverList(
                       delegate: SliverChildBuilderDelegate(
-                            (context, index) {
+                        (context, index) {
                           final bill = billProvider.bills[index];
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 12),

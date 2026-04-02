@@ -1,12 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
-import '../models/bill.dart';
-import '../models/bill_item.dart';
-import '../models/product.dart';
-import '../models/customer.dart';
-import '../models/payment.dart';
-import '../config/app_constants.dart';
-import '../services/database_service.dart';
+import 'package:khata/models/bill.dart';
+import 'package:khata/models/bill_item.dart';
+import 'package:khata/models/product.dart';
+import 'package:khata/models/customer.dart';
+import 'package:khata/models/payment.dart';
+import 'package:khata/config/app_constants.dart';
+import 'package:khata/services/database_service.dart';
 
 class BillProvider with ChangeNotifier {
   final DatabaseService _db = DatabaseService.instance;

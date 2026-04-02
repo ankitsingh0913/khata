@@ -24,15 +24,19 @@ class Customer {
 
   factory Customer.fromJson(Map<String, dynamic> json) {
     return Customer(
-      id: json["id"],
-      name: json["name"],
-      phone: json["phone"],
-      email: json["email"],
-      address: json["address"],
-      totalPurchase: (json["totalPurchase"] ?? 0).toDouble(),
-      pendingAmount: (json["pendingAmount"] ?? 0).toDouble(),
-      createdAt: DateTime.parse(json["createdAt"]),
-      updatedAt: DateTime.parse(json["updatedAt"]),
+      id: json['id'] ?? '',
+      name: json['name'] ?? '',
+      phone: json['phone'] ?? '',
+      email: json['email'],
+      address: json['address'],
+      totalPurchase: (json['totalPurchase'] ?? 0).toDouble(),
+      pendingAmount: (json['pending'] ?? json['pendingAmount'] ?? 0).toDouble(),
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'])
+          : DateTime.now(),
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.parse(json['updatedAt'])
+          : DateTime.now(),
     );
   }
 
