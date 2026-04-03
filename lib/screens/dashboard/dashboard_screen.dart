@@ -225,8 +225,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 context,
                                 MaterialPageRoute(
                                     builder: (_) =>
-                                        const LoanDashboardScreen()
-                                ),
+                                        const LoanDashboardScreen()),
                               );
                             },
                           ),
@@ -267,70 +266,63 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
 
-              Consumer<BillProvider>(
-                builder: (context, billProvider, _) {
-                  if (billProvider.isLoading) {
-                    return const SliverFillRemaining(
-                      hasScrollBody: false,
-                      child: Center(child: CircularProgressIndicator()),
-                    );
-                  }
-
-                  if (billProvider.bills.isEmpty) {
-                    return SliverFillRemaining(
-                      hasScrollBody: false,
-                      child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.receipt_long_outlined,
-                              size: 80,
-                              color: AppTheme.textSecondary.withOpacity(0.5),
-                            ),
-                            const SizedBox(height: 16),
-                            const Text(
-                              'No bills yet',
-                              style: TextStyle(
-                                fontSize: 18,
-                                color: AppTheme.textSecondary,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'Create your first bill',
-                              style: TextStyle(
-                                color: AppTheme.textSecondary,
-                              ),
-                            ),
-                          ],
+              if (dashboard.isLoading)
+                const SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else if (dashboard.recentBills.isEmpty)
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.receipt_long_outlined,
+                          size: 80,
+                          color: AppTheme.textSecondary.withOpacity(0.5),
                         ),
-                      ),
-                    );
-                  }
-
-                  return SliverPadding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    sliver: SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final bill = billProvider.bills[index];
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: BillCard(
-                              bill: bill,
-                              onTap: () {
-                                // Navigate to bill detail
-                              },
-                            ),
-                          );
-                        },
-                        childCount: billProvider.bills.take(10).length,
-                      ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'No bills yet',
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: AppTheme.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Create your first bill',
+                          style: TextStyle(
+                            color: AppTheme.textSecondary,
+                          ),
+                        ),
+                      ],
                     ),
-                  );
-                },
-              ),
+                  ),
+                )
+              else
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final bill = dashboard.recentBills[index];
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: BillCard(
+                            bill: bill,
+                            onTap: () {
+                              // Navigate to bill detail
+                            },
+                          ),
+                        );
+                      },
+                      childCount: dashboard.recentBills.take(10).length,
+                    ),
+                  ),
+                ),
 
               const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
             ],

@@ -2,10 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:khata/services/api_services/dashboard_api_service.dart';
 import '../models/customer.dart';
 import '../models/bill.dart';
-import '../services/database_service.dart';
 
 class DashboardProvider with ChangeNotifier {
-  final DatabaseService _db = DatabaseService.instance;
 
   Map<String, dynamic> _stats = {};
   List<Map<String, dynamic>> _salesChartData = [];
