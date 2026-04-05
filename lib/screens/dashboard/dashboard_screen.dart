@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:khata/providers/auth_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import 'package:khata/providers/auth_provider.dart';
 import 'package:khata/providers/bill_provider.dart';
 import 'package:khata/providers/dashboard_provider.dart';
 import 'package:khata/providers/customer_provider.dart';
@@ -15,6 +15,8 @@ import 'package:khata/screens/products/product_list_screen.dart';
 import 'package:khata/screens/billing/create_bill_screen.dart';
 import 'package:khata/screens/billing/bill_history_screen.dart';
 import 'package:khata/screens/loans/loan_dashboard_screen.dart';
+import 'package:khata/screens/profile/profile_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class DashboardScreen extends StatefulWidget {
   final int initialTab;
@@ -26,6 +28,9 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   late int _currentIndex;
+  String? _shopName;
+  String? _ownerName;
+  String? _phone;
 
   @override
   void initState() {
@@ -35,6 +40,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _loadData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final shopName = prefs.getString('shopName');
+    // login stores owner as 'fullName'; signup stores as 'ownerName'
+    final ownerName =
+        prefs.getString('fullName') ?? prefs.getString('ownerName');
+    final phone = prefs.getString('phone');
+    if (mounted) {
+      setState(() {
+        _shopName = shopName;
+        _ownerName = ownerName;
+        _phone = phone;
+      });
+    }
     try {
       await Future.wait([
         context.read<DashboardProvider>().loadDashboard(),
@@ -79,8 +97,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         NumberFormat.currency(symbol: AppConstants.currency, decimalDigits: 0);
     return Consumer<DashboardProvider>(
       builder: (context, dashboard, _) {
-        final auth = context.watch<AuthProvider>();
-
         return RefreshIndicator(
           onRefresh: _loadData,
           child: CustomScrollView(
@@ -94,7 +110,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      auth.shopName ?? 'My Shop',
+                      _shopName ?? 'My Shop',
                       style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -102,7 +118,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ),
                     Text(
-                      'Welcome back, ${auth.ownerName ?? 'User'}!',
+                      'Welcome back, ${_ownerName ?? 'User'}!',
                       style: const TextStyle(
                         fontSize: 14,
                         color: AppTheme.textSecondary,
@@ -386,17 +402,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             child: Row(
               children: [
-                Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: const Icon(
-                    Icons.store,
-                    color: AppTheme.primaryColor,
-                    size: 30,
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                    );
+                  },
+                  child: Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Icon(
+                      Icons.store,
+                      color: AppTheme.primaryColor,
+                      size: 30,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -405,20 +429,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        auth.shopName ?? 'My Shop',
+                        _shopName ?? 'My Shop',
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       Text(
-                        auth.ownerName ?? 'Owner',
+                        _ownerName ?? 'Owner',
                         style: const TextStyle(
                           color: AppTheme.textSecondary,
                         ),
                       ),
                       Text(
-                        auth.phone ?? '',
+                        _phone ?? '',
                         style: const TextStyle(
                           color: AppTheme.textSecondary,
                         ),

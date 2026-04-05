@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:khata/core/storage/token_storage.dart';
 import 'package:khata/services/api_services/auth_api_service.dart';
+import 'package:khata/services/api_services/profile_api_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthProvider with ChangeNotifier {
@@ -10,13 +11,11 @@ class AuthProvider with ChangeNotifier {
   String? _phone;
   bool _isInitialized = false;
 
-
   bool get isLoggedIn => _isLoggedIn;
   String? get shopName => _shopName;
   String? get ownerName => _ownerName;
   String? get phone => _phone;
   bool get isInitialized => _isInitialized;
-
 
   Future<void> checkLoginStatus() async {
     try {
@@ -49,7 +48,6 @@ class AuthProvider with ChangeNotifier {
     required String password,
   }) async {
     try {
-
       final result = await AuthApiService.login(
         email: email,
         password: password,
@@ -67,10 +65,25 @@ class AuthProvider with ChangeNotifier {
 
       _isLoggedIn = true;
 
+      // Fetch user details from /users/me and persist to SharedPrefs
+      final profile = await ProfileApiService.getProfile();
+      if (profile != null) {
+        final shop = profile['shopName'] as String?;
+        final owner = profile['fullName'] as String?;
+        final ph = profile['phone'] as String?;
+        final em = profile['email'] as String?;
+
+        if (shop != null) { await prefs.setString('shopName', shop); _shopName = shop; }
+        if (owner != null) { await prefs.setString('fullName', owner); _ownerName = owner; }
+        if (ph != null) { await prefs.setString('phone', ph); _phone = ph; }
+        if (em != null) await prefs.setString('email', em);
+
+        debugPrint('Persisted profile: shop=$shop, owner=$owner');
+      }
+
       notifyListeners();
 
       return true;
-
     } catch (e) {
       debugPrint('Login error: $e');
       return false;
@@ -85,7 +98,6 @@ class AuthProvider with ChangeNotifier {
     required String password,
   }) async {
     try {
-
       final result = await AuthApiService.signup(
         shopName: shopName,
         ownerName: ownerName,
@@ -111,7 +123,6 @@ class AuthProvider with ChangeNotifier {
       notifyListeners();
 
       return true;
-
     } catch (e) {
       debugPrint("Signup error: $e");
       return false;
@@ -134,7 +145,6 @@ class AuthProvider with ChangeNotifier {
       debugPrint('AuthProvider logout error: $e');
     }
   }
-
 
   Future<void> updateShopInfo({String? shopName, String? ownerName}) async {
     try {
