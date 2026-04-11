@@ -65,8 +65,8 @@ class Bill {
 
   factory Bill.fromJson(Map<String, dynamic> json) {
     return Bill(
-      id: json["id"],
-      billNumber: json["billNumber"],
+      id: json["id"] ?? '',
+      billNumber: json["billNumber"] ?? '',
       customerId: json["customerId"],
       customerName: json["customerName"],
       customerPhone: json["customerPhone"],
@@ -81,7 +81,7 @@ class Bill {
       paidAmount: (json["paidAmount"] ?? 0).toDouble(),
       paymentType: json["paymentType"]?.toString().toUpperCase() ??
           AppConstants.paymentCash,
-      status: json["status"]?.toString() ?? AppConstants.billUnpaid,
+      status: json["status"]?.toString().toUpperCase() ?? AppConstants.billUnpaid,
       notes: json["notes"],
       createdAt: json["createdAt"] != null
           ? DateTime.parse(json["createdAt"])

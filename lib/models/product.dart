@@ -56,8 +56,8 @@ class Product {
 
   factory Product.fromJson(Map<String, dynamic> json) {
     return Product(
-      id: json["id"],
-      name: json["name"],
+      id: json["id"] ?? '',
+      name: json["name"] ?? '',
       description: json["description"],
       category: json["category"],
       barcode: json["barcode"],
@@ -67,11 +67,14 @@ class Product {
       lowStockAlert: json["lowStockAlert"] ?? 10,
       unit: json["unit"] ?? "pcs",
       isActive: json["isActive"] ?? true,
-      createdAt: DateTime.parse(json["createdAt"]),
-      updatedAt: DateTime.parse(json["updatedAt"]),
+      createdAt: json["createdAt"] != null
+          ? DateTime.parse(json["createdAt"])
+          : DateTime.now(),
+      updatedAt: json["updatedAt"] != null
+          ? DateTime.parse(json["updatedAt"])
+          : DateTime.now(),
     );
   }
-
   factory Product.fromMap(Map<String, dynamic> map) {
     return Product(
       id: map['id'],

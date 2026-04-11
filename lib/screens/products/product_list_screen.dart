@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:khata/models/product.dart';
 import 'package:provider/provider.dart';
-import 'package:khata/Config/app_constants.dart';
+import 'package:khata/config/app_constants.dart';
 import 'package:khata/providers/product_provider.dart';
 import 'package:khata/config/app_theme.dart';
 import 'package:khata/widgets/custom_text_field.dart';
@@ -69,12 +69,12 @@ class _ProductListScreenState extends State<ProductListScreen> {
               prefixIcon: const Icon(Icons.search),
               suffixIcon: _searchController.text.isNotEmpty
                   ? IconButton(
-                icon: const Icon(Icons.clear),
-                onPressed: () {
-                  _searchController.clear();
-                  context.read<ProductProvider>().loadProducts();
-                },
-              )
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        _searchController.clear();
+                        context.read<ProductProvider>().loadProducts();
+                      },
+                    )
                   : null,
               onChanged: (value) {
                 context.read<ProductProvider>().searchProducts(value);
@@ -107,7 +107,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                           ? AppTheme.primaryColor
                           : AppTheme.textSecondary,
                       fontWeight:
-                      isSelected ? FontWeight.w600 : FontWeight.normal,
+                          isSelected ? FontWeight.w600 : FontWeight.normal,
                     ),
                   ),
                 );
@@ -224,7 +224,7 @@ class ProductDetailSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final currencyFormat =
-    NumberFormat.currency(symbol: AppConstants.currency, decimalDigits: 0);
+        NumberFormat.currency(symbol: AppConstants.currency, decimalDigits: 0);
 
     return Container(
       decoration: const BoxDecoration(
@@ -453,10 +453,10 @@ class ProductDetailSheet extends StatelessWidget {
                 final qty = int.tryParse(controller.text) ?? 0;
                 if (qty > 0) {
                   await context.read<ProductProvider>().updateStock(
-                    product.id,
-                    qty,
-                    isDeduct: !isAdding,
-                  );
+                        product.id,
+                        qty,
+                        isDeduct: !isAdding,
+                      );
                   Navigator.pop(context);
                   Navigator.pop(context);
                 }

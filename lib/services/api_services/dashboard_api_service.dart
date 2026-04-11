@@ -1,12 +1,9 @@
-
 import 'package:khata/core/api/api_client.dart';
 
 class DashboardApiService {
-
   static Future<Map<String, dynamic>> getDashboard() async {
-
     final response = await ApiClient.dio.get("/dashboard");
-    
+
     print("FULL RESPONSE -> ${response.data}");
 
     if (response.data == null) {
@@ -24,10 +21,11 @@ class DashboardApiService {
   }
 
   static Future<Map<String, dynamic>> getStats() async {
-
     final response = await ApiClient.dio.get("/dashboard/stats");
 
-    return response.data["data"];
-
+    if (response.data == null || response.data["data"] == null) {
+      throw Exception("Stats API returned invalid response");
+    }
+    return Map<String, dynamic>.from(response.data["data"]);
   }
 }

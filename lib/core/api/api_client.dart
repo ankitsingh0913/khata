@@ -61,17 +61,23 @@ class ApiClient {
                 data: {"refreshToken": refreshToken},
               );
 
-              final newAccess = refreshResponse.data["accessToken"];
-              final newRefresh = refreshResponse.data["refreshToken"];
+              final newAccess = refreshResponse.data["accessToken"] as String?;
+              final newRefresh = refreshResponse.data["refreshToken"] as String?;
+
+              if (newAccess == null || newRefresh == null) {
+                await TokenStorage.clear();
+                return handler.next(response);
+              }
 
               await TokenStorage.saveAccessToken(newAccess);
               await TokenStorage.saveRefreshToken(newRefresh);
 
               final requestOptions = response.requestOptions;
-
               requestOptions.headers["Authorization"] = "Bearer $newAccess";
 
-              final retryResponse = await dio.fetch(requestOptions);
+              requestOptions.extra["isRetry"] = true;
+
+              final retryResponse = await _refreshDio.fetch(requestOptions);
 
               return handler.resolve(retryResponse);
 

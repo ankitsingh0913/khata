@@ -31,15 +31,10 @@ class Customer {
       address: json['address'],
       totalPurchase: (json['totalPurchase'] ?? 0).toDouble(),
       pendingAmount: (json['pending'] ?? json['pendingAmount'] ?? 0).toDouble(),
-      createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'])
-          : DateTime.now(),
-      updatedAt: json['updatedAt'] != null
-          ? DateTime.parse(json['updatedAt'])
-          : DateTime.now(),
+      createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
+      updatedAt: DateTime.tryParse(json['updatedAt'] ?? '') ?? DateTime.now(),
     );
   }
-
   Map<String, dynamic> toMap() {
     return {
       'id': id,

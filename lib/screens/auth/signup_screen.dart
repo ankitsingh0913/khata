@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:khata/Screens/auth/login_screen.dart';
+import 'package:khata/screens/auth/login_screen.dart';
 import 'package:provider/provider.dart';
-import '../../providers/auth_provider.dart';
-import '../../config/app_theme.dart';
-import '../../widgets/custom_button.dart';
-import '../../widgets/custom_text_field.dart';
-import '../dashboard/dashboard_screen.dart';
+import 'package:khata/providers/auth_provider.dart';
+import 'package:khata/config/app_theme.dart';
+import 'package:khata/widgets/custom_button.dart';
+import 'package:khata/widgets/custom_text_field.dart';
+import 'package:khata/screens/dashboard/dashboard_screen.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -41,12 +41,12 @@ class _SignupScreenState extends State<SignupScreen> {
     setState(() => _isLoading = true);
 
     final success = await context.read<AuthProvider>().signup(
-      shopName: _shopNameController.text,
-      ownerName: _ownerNameController.text,
-      phone: _phoneController.text,
-      email: _emailController.text,
-      password: _passwordController.text,
-    );
+          shopName: _shopNameController.text,
+          ownerName: _ownerNameController.text,
+          phone: _phoneController.text,
+          email: _emailController.text,
+          password: _passwordController.text,
+        );
 
     if (!mounted) return;
 
@@ -55,6 +55,15 @@ class _SignupScreenState extends State<SignupScreen> {
     if (success) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const DashboardScreen()),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            //context.read<AuthProvider>().error ?? 
+            'Signup failed. Please try again.'),
+          backgroundColor: AppTheme.errorColor,
+        ),
       );
     }
   }
@@ -71,9 +80,7 @@ class _SignupScreenState extends State<SignupScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-
                 const SizedBox(height: 40),
-
                 const Center(
                   child: Text(
                     'Create your account',
@@ -84,27 +91,21 @@ class _SignupScreenState extends State<SignupScreen> {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 40),
-
                 CustomTextField(
                   label: 'Shop Name',
                   hint: 'Enter your shop name',
                   controller: _shopNameController,
                   prefixIcon: const Icon(Icons.store_outlined),
                 ),
-
                 const SizedBox(height: 20),
-
                 CustomTextField(
                   label: 'Owner Name',
                   hint: 'Enter owner name',
                   controller: _ownerNameController,
                   prefixIcon: const Icon(Icons.person_outline),
                 ),
-
                 const SizedBox(height: 20),
-
                 CustomTextField(
                   label: 'Email',
                   hint: 'Enter email',
@@ -112,9 +113,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   keyboardType: TextInputType.emailAddress,
                   prefixIcon: const Icon(Icons.email_outlined),
                 ),
-
                 const SizedBox(height: 20),
-
                 CustomTextField(
                   label: 'Phone Number',
                   hint: 'Enter phone number',
@@ -122,40 +121,45 @@ class _SignupScreenState extends State<SignupScreen> {
                   keyboardType: TextInputType.phone,
                   prefixIcon: const Icon(Icons.phone_outlined),
                 ),
-
                 const SizedBox(height: 20),
-
                 CustomTextField(
                   label: 'Password',
                   hint: 'Enter password',
                   controller: _passwordController,
                   obscureText: true,
                   prefixIcon: const Icon(Icons.lock_outline),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter password';
+                    }
+                    if (value.length < 6) {
+                      return 'Password must be at least 6 characters';
+                    }
+                    if (!value.contains('@')) {
+                      return 'Password must contain @';
+                    }
+                    return null;
+                  },
                 ),
-
                 const SizedBox(height: 40),
-
                 CustomButton(
                   text: "Create Account",
                   isLoading: _isLoading,
                   onPressed: _handleSignup,
                   icon: Icons.arrow_forward_rounded,
                 ),
-
                 const SizedBox(height: 16),
-
                 Center(
                   child: TextButton(
                     onPressed: () {
                       Navigator.pushReplacement(
                         context,
-                        MaterialPageRoute(builder: (_) => LoginScreen()),
-                      );;
+                        MaterialPageRoute(builder: (_) => const LoginScreen()),
+                      );
                     },
                     child: const Text("Already have an account? Login"),
                   ),
                 )
-
               ],
             ),
           ),

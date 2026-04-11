@@ -4,7 +4,6 @@ import '../models/customer.dart';
 import '../models/bill.dart';
 
 class DashboardProvider with ChangeNotifier {
-
   Map<String, dynamic> _stats = {};
   List<Map<String, dynamic>> _salesChartData = [];
   List<Customer> _topCustomers = [];
@@ -38,7 +37,8 @@ class DashboardProvider with ChangeNotifier {
     try {
       final data = await DashboardApiService.getDashboard();
       _stats = data["stats"] ?? {};
-      _salesChartData = List<Map<String, dynamic>>.from(data["salesChart"] ?? []);
+      _salesChartData =
+          List<Map<String, dynamic>>.from(data["salesChart"] ?? []);
       _topCustomers = (data["topCustomers"] as List? ?? [])
           .map((e) => Customer.fromJson(e))
           .toList();
@@ -64,6 +64,7 @@ class DashboardProvider with ChangeNotifier {
     } catch (e) {
       _error = e.toString();
       debugPrint("DashboardProvider refresh error: $e");
+      notifyListeners();
     }
   }
 }

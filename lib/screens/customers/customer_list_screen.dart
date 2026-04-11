@@ -60,12 +60,7 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.person_add_outlined),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const AddCustomerScreen()),
-              );
-            },
+            onPressed: _openAddCustomer,
           ),
         ],
       ),
@@ -112,14 +107,7 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                         ),
                         const SizedBox(height: 8),
                         TextButton.icon(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const AddCustomerScreen(),
-                              ),
-                            );
-                          },
+                          onPressed: _openAddCustomer,
                           icon: const Icon(Icons.add),
                           label: const Text('Add Customer'),
                         ),

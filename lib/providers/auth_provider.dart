@@ -55,8 +55,14 @@ class AuthProvider with ChangeNotifier {
 
       if (result == null) return false;
 
-      await TokenStorage.saveAccessToken(result["accessToken"]);
-      await TokenStorage.saveRefreshToken(result["refreshToken"]);
+      final accessToken = result["accessToken"] as String?;
+      final refreshToken = result["refreshToken"] as String?;
+      if (accessToken == null || refreshToken == null) {
+        debugPrint('Login response missing tokens');
+        return false;
+      }
+      await TokenStorage.saveAccessToken(accessToken);
+      await TokenStorage.saveRefreshToken(refreshToken);
       print(result);
 
       final prefs = await SharedPreferences.getInstance();
@@ -73,9 +79,18 @@ class AuthProvider with ChangeNotifier {
         final ph = profile['phone'] as String?;
         final em = profile['email'] as String?;
 
-        if (shop != null) { await prefs.setString('shopName', shop); _shopName = shop; }
-        if (owner != null) { await prefs.setString('fullName', owner); _ownerName = owner; }
-        if (ph != null) { await prefs.setString('phone', ph); _phone = ph; }
+        if (shop != null) {
+          await prefs.setString('shopName', shop);
+          _shopName = shop;
+        }
+        if (owner != null) {
+          await prefs.setString('fullName', owner);
+          _ownerName = owner;
+        }
+        if (ph != null) {
+          await prefs.setString('phone', ph);
+          _phone = ph;
+        }
         if (em != null) await prefs.setString('email', em);
 
         debugPrint('Persisted profile: shop=$shop, owner=$owner');

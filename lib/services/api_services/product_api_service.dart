@@ -5,7 +5,6 @@ class ProductApiService {
 
   static Future<List<Product>> getProducts() async {
     final response = await ApiClient.dio.get("/products");
-    print("PRODUCT API RESPONSE: ${response.data}");
 
     final responseData = response.data;
     if (responseData is List) {

@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:khata/models/product.dart';
-import 'package:khata/services/api_services/product_api_service.dart';
+import 'package:khata/models/product.dart';
 import 'package:khata/services/api_services/product_api_service.dart';
 
 class ProductProvider with ChangeNotifier {
@@ -40,14 +40,12 @@ class ProductProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-
       final allProducts = await ProductApiService.getProducts();
       _products = allProducts
           .where((p) =>
-      p.name.toLowerCase().contains(query.toLowerCase()) ||
-          (p.barcode ?? "").contains(query))
+              p.name.toLowerCase().contains(query.toLowerCase()) ||
+              (p.barcode ?? "").contains(query))
           .toList();
-
     } catch (e) {
       _error = e.toString();
     }
@@ -67,7 +65,6 @@ class ProductProvider with ChangeNotifier {
     String unit = 'pcs',
   }) async {
     try {
-
       final payload = {
         "name": name,
         "description": description,
@@ -107,7 +104,7 @@ class ProductProvider with ChangeNotifier {
       };
 
       final updatedProduct =
-      await ProductApiService.updateProduct(product.id, payload);
+          await ProductApiService.updateProduct(product.id, payload);
 
       final index = _products.indexWhere((p) => p.id == product.id);
       if (index != -1) {
@@ -119,7 +116,6 @@ class ProductProvider with ChangeNotifier {
       notifyListeners();
 
       return true;
-
     } catch (e) {
       _error = e.toString();
       notifyListeners();
@@ -140,9 +136,7 @@ class ProductProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> updateStock(
-      String productId,
-      int quantity,
+  Future<bool> updateStock(String productId, int quantity,
       {bool isDeduct = true}) async {
     try {
       await ProductApiService.updateStock(productId, quantity, isDeduct);
@@ -154,7 +148,6 @@ class ProductProvider with ChangeNotifier {
       return false;
     }
   }
-
 
   void selectProduct(Product product) {
     _selectedProduct = product;

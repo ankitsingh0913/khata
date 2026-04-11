@@ -93,7 +93,6 @@ class ProfileProvider with ChangeNotifier {
       _gstNumber = gstNumber;
 
       await _persistLocally();
-      success = true;
     } catch (e) {
       _error = e.toString();
       debugPrint('ProfileProvider.updateProfile error: $e');

@@ -333,10 +333,14 @@ class _ProfileScreenState extends State<ProfileScreen>
               const SizedBox(height: 12),
               _profileCard(children: [
                 _profileField(
-                    icon: Icons.store_outlined, label: 'Shop Name', value: shopName),
+                    icon: Icons.store_outlined,
+                    label: 'Shop Name',
+                    value: shopName),
                 _divider(),
                 _profileField(
-                    icon: Icons.person_outline, label: 'Owner Name', value: fullName),
+                    icon: Icons.person_outline,
+                    label: 'Owner Name',
+                    value: fullName),
                 _divider(),
                 _profileField(
                     icon: Icons.phone_outlined, label: 'Phone', value: phone),
@@ -430,10 +434,10 @@ class _ProfileScreenState extends State<ProfileScreen>
             fullName: ownerCtrl.text.trim(),
             phone: phoneCtrl.text.trim(),
             email: emailCtrl.text.trim().isEmpty ? null : emailCtrl.text.trim(),
-            address:
-                addressCtrl.text.trim().isEmpty ? null : addressCtrl.text.trim(),
-            gstNumber:
-                gstCtrl.text.trim().isEmpty ? null : gstCtrl.text.trim(),
+            address: addressCtrl.text.trim().isEmpty
+                ? null
+                : addressCtrl.text.trim(),
+            gstNumber: gstCtrl.text.trim().isEmpty ? null : gstCtrl.text.trim(),
           );
 
           // Also update AuthProvider so the dashboard header is in sync
@@ -485,11 +489,10 @@ class _ProfileScreenState extends State<ProfileScreen>
         content: const Text('Are you sure you want to log out?'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel')),
+              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.errorColor),
+            style:
+                ElevatedButton.styleFrom(backgroundColor: AppTheme.errorColor),
             onPressed: () async {
               Navigator.pop(ctx);
               await ctx.read<AuthProvider>().logout();
@@ -511,8 +514,8 @@ class _ProfileScreenState extends State<ProfileScreen>
       context: ctx,
       applicationName: 'Khata – Smart Shopkeeper',
       applicationVersion: '1.0.0',
-      applicationIcon:
-          const Icon(Icons.store_rounded, size: 40, color: AppTheme.primaryColor),
+      applicationIcon: const Icon(Icons.store_rounded,
+          size: 40, color: AppTheme.primaryColor),
       children: const [
         Text('A smart billing and ledger app for small businesses.'),
       ],
@@ -523,7 +526,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   String _initials(String name) {
     final parts = name.trim().split(' ');
-    if (parts.length >= 2) {
+    if (parts.length >= 2 && parts[0].isNotEmpty && parts[1].isNotEmpty) {
       return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
     }
     return name.isNotEmpty ? name[0].toUpperCase() : '?';
@@ -633,9 +636,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         trailing: Text(
           trailing,
           style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-              color: color),
+              fontSize: 15, fontWeight: FontWeight.bold, color: color),
         ),
       ),
     );
@@ -693,7 +694,11 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _divider() => const Divider(
-      height: 1, thickness: 1, indent: 48, endIndent: 16, color: AppTheme.borderColor);
+      height: 1,
+      thickness: 1,
+      indent: 48,
+      endIndent: 16,
+      color: AppTheme.borderColor);
 
   Widget _actionTile({
     required IconData icon,
@@ -735,7 +740,8 @@ class _ProfileScreenState extends State<ProfileScreen>
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: isDestructive ? AppTheme.errorColor : AppTheme.textPrimary,
+                color:
+                    isDestructive ? AppTheme.errorColor : AppTheme.textPrimary,
               ),
             ),
             const Spacer(),
@@ -780,7 +786,8 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding:
+          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: Container(
         decoration: const BoxDecoration(
           color: Colors.white,
@@ -886,8 +893,11 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(success ? '✅ Profile updated!' : '❌ Failed to update. Saved locally.'),
-          backgroundColor: success ? AppTheme.successColor : AppTheme.errorColor,
+          content: Text(success
+              ? '✅ Profile updated!'
+              : '❌ Failed to update. Saved locally.'),
+          backgroundColor:
+              success ? AppTheme.successColor : AppTheme.errorColor,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
@@ -948,7 +958,8 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding:
+          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: Container(
         decoration: const BoxDecoration(
           color: Colors.white,
@@ -978,15 +989,13 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
                       fontWeight: FontWeight.bold,
                       color: AppTheme.textPrimary)),
               const SizedBox(height: 20),
-
               _passwordField(
                   ctrl: _currentCtrl,
                   label: 'Current Password',
                   obscure: _obscureCurrent,
                   toggle: () =>
                       setState(() => _obscureCurrent = !_obscureCurrent),
-                  validator: (v) =>
-                      v == null || v.isEmpty ? 'Required' : null),
+                  validator: (v) => v == null || v.isEmpty ? 'Required' : null),
               const SizedBox(height: 12),
               _passwordField(
                   ctrl: _newCtrl,
@@ -1008,7 +1017,6 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
                   validator: (v) =>
                       v != _newCtrl.text ? 'Passwords do not match' : null),
               const SizedBox(height: 24),
-
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -1038,8 +1046,11 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(success ? '✅ Password updated!' : '❌ Incorrect current password.'),
-          backgroundColor: success ? AppTheme.successColor : AppTheme.errorColor,
+          content: Text(success
+              ? '✅ Password updated!'
+              : '❌ Incorrect current password.'),
+          backgroundColor:
+              success ? AppTheme.successColor : AppTheme.errorColor,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
