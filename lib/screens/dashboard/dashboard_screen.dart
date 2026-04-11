@@ -95,8 +95,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildHomeTab() {
     final currencyFormat =
         NumberFormat.currency(symbol: AppConstants.currency, decimalDigits: 0);
-    return Consumer<DashboardProvider>(
-      builder: (context, dashboard, _) {
+    return Consumer2<DashboardProvider,CustomerProvider>(
+      builder: (context, dashboard, customerProvider, _) {
+        final totalPending = customerProvider.totalPendingAmount;
         return RefreshIndicator(
           onRefresh: _loadData,
           child: CustomScrollView(
@@ -161,7 +162,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                     StatCard(
                       title: 'Total Pending',
-                      value: currencyFormat.format(dashboard.totalPending),
+                      value: currencyFormat.format(totalPending),
                       icon: Icons.account_balance_wallet_outlined,
                       color: AppTheme.errorColor,
                       onTap: () {

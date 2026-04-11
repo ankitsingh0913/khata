@@ -28,12 +28,12 @@ class ProfileApiService {
     String? gstNumber,
   }) async {
     try {
-      final response = await ApiClient.dio.put(
-        '$_baseUrl/users/',
+      final response = await ApiClient.dio.patch(
+        '$_baseUrl/users/update',
         data: jsonEncode({
-          'shopName': shopName,
-          'fullName': fullName,
-          'phone': phone,
+          if (shopName.isNotEmpty) 'shopName': shopName,
+          if (fullName.isNotEmpty) 'fullName': fullName,
+          if (phone.isNotEmpty) 'phone': phone,
           if (email != null) 'email': email,
           if (address != null) 'address': address,
           if (gstNumber != null) 'gstNumber': gstNumber,
