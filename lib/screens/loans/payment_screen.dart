@@ -11,7 +11,7 @@ import '../../config/app_constants.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/cash_payment_confirmation_dialog.dart';
-import '../billing/upi_demo_payment_screen.dart';
+import '../billing/upi_payment_screen.dart';
 
 class PaymentScreen extends StatefulWidget {
   final Customer? customer;
@@ -116,11 +116,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
       status: AppConstants.billUnpaid,
     );
 
-    // Show UPI Demo Payment Screen
-    final upiResult = await Navigator.push<UpiDemoPaymentFlowResult>(
+    // Show UPI Payment Screen
+    final upiResult = await Navigator.push<UpiPaymentFlowResult>(
       context,
       MaterialPageRoute(
-        builder: (_) => UpiDemoPaymentScreen(bill: billForUpi),
+        builder: (_) => UpiPaymentScreen(bill: billForUpi),
       ),
     );
 
@@ -296,28 +296,13 @@ class _PaymentScreenState extends State<PaymentScreen> {
               color: AppTheme.successColor,
             ),
 
-            // UPI Option with Demo badge
+            // UPI Option
             _buildPaymentMethodTile(
               icon: Icons.qr_code,
               title: 'UPI',
               subtitle: 'Pay via UPI QR code',
               value: AppConstants.paymentUpi,
               color: AppTheme.primaryColor,
-              trailing: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppTheme.warningColor,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: const Text(
-                  'DEMO',
-                  style: TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
             ),
 
             // Card Option
@@ -706,27 +691,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
                                     fontSize: 15,
                                   ),
                                 ),
-                                if (_selectedPaymentType == AppConstants.paymentUpi) ...[
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 6,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.warningColor,
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: const Text(
-                                      'DEMO',
-                                      style: TextStyle(
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                ],
                               ],
                             ),
                             const Text(
@@ -768,26 +732,26 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppTheme.warningColor.withOpacity(0.1),
+                    color: AppTheme.primaryColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: AppTheme.warningColor.withOpacity(0.3),
+                      color: AppTheme.primaryColor.withOpacity(0.3),
                     ),
                   ),
                   child: Row(
                     children: [
                       Icon(
                         Icons.info_outline,
-                        color: AppTheme.warningColor,
+                        color: AppTheme.primaryColor,
                         size: 20,
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'UPI Demo Mode: A QR code will be shown. No real money will be transferred.',
+                          'A UPI QR code will be shown for the customer to scan and pay.',
                           style: TextStyle(
                             fontSize: 12,
-                            color: AppTheme.warningColor,
+                            color: AppTheme.primaryColor,
                           ),
                         ),
                       ),

@@ -9,6 +9,7 @@ class ProfileProvider with ChangeNotifier {
   String? _email;
   String? _address;
   String? _gstNumber;
+  String? _upiId;
   bool _isLoading = false;
   bool _isSaving = false;
   String? _error;
@@ -19,6 +20,7 @@ class ProfileProvider with ChangeNotifier {
   String? get email => _email;
   String? get address => _address;
   String? get gstNumber => _gstNumber;
+  String? get upiId => _upiId;
   bool get isLoading => _isLoading;
   bool get isSaving => _isSaving;
   String? get error => _error;
@@ -37,6 +39,7 @@ class ProfileProvider with ChangeNotifier {
       _email = prefs.getString('email');
       _address = prefs.getString('address');
       _gstNumber = prefs.getString('gstNumber');
+      _upiId = prefs.getString('upiId');
 
       // Try to refresh from API
       final remote = await ProfileApiService.getProfile();
@@ -47,6 +50,7 @@ class ProfileProvider with ChangeNotifier {
         _email = remote['email'] ?? _email;
         _address = remote['address'] ?? _address;
         _gstNumber = remote['gstNumber'] ?? _gstNumber;
+        _upiId = remote['upiId'] ?? _upiId;
 
         // Persist back
         await _persistLocally();
@@ -67,6 +71,7 @@ class ProfileProvider with ChangeNotifier {
     String? email,
     String? address,
     String? gstNumber,
+    String? upiId,
   }) async {
     _isSaving = true;
     _error = null;
@@ -82,6 +87,7 @@ class ProfileProvider with ChangeNotifier {
         email: email,
         address: address,
         gstNumber: gstNumber,
+        upiId: upiId,
       );
 
       // Even if API fails, update locally so the UI reflects changes
@@ -91,6 +97,7 @@ class ProfileProvider with ChangeNotifier {
       _email = email;
       _address = address;
       _gstNumber = gstNumber;
+      _upiId = upiId;
 
       await _persistLocally();
     } catch (e) {
@@ -134,5 +141,6 @@ class ProfileProvider with ChangeNotifier {
     if (_email != null) await prefs.setString('email', _email!);
     if (_address != null) await prefs.setString('address', _address!);
     if (_gstNumber != null) await prefs.setString('gstNumber', _gstNumber!);
+    if (_upiId != null) await prefs.setString('upiId', _upiId!);
   }
 }

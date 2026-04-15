@@ -67,7 +67,7 @@ OPTION 1 — Finish Core Product (Recommended):
  ✔ Product selection (search + add to cart) @done(26-04-02 23:48)
  ✔ Quantity handling @done(26-04-02 23:49)
  ✔ Customer selection @done(26-04-02 23:49)
- ☐ Payment integration
+ ✔ Payment integration @done(26-04-13 16:49)
  ☐ Save bill → update stock → update dues
 
 OPTION 2 — Fix Auth + Profile System:

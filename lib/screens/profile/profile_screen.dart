@@ -322,6 +322,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     final email = profile.email ?? '—';
     final address = profile.address ?? '—';
     final gstNumber = profile.gstNumber ?? '—';
+    final upiId = profile.upiId ?? '—';
 
     return profile.isLoading
         ? const Center(child: CircularProgressIndicator())
@@ -347,6 +348,17 @@ class _ProfileScreenState extends State<ProfileScreen>
                 _divider(),
                 _profileField(
                     icon: Icons.email_outlined, label: 'Email', value: email),
+              ]),
+              const SizedBox(height: 20),
+
+              // ── Payment Settings ──
+              _sectionTitle('Payment Settings'),
+              const SizedBox(height: 12),
+              _profileCard(children: [
+                _profileField(
+                    icon: Icons.qr_code,
+                    label: 'UPI ID',
+                    value: upiId),
               ]),
               const SizedBox(height: 20),
 
@@ -416,6 +428,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     final emailCtrl = TextEditingController(text: profile.email ?? '');
     final addressCtrl = TextEditingController(text: profile.address ?? '');
     final gstCtrl = TextEditingController(text: profile.gstNumber ?? '');
+    final upiCtrl = TextEditingController(text: profile.upiId ?? '');
 
     showModalBottomSheet(
       context: context,
@@ -428,6 +441,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         emailCtrl: emailCtrl,
         addressCtrl: addressCtrl,
         gstCtrl: gstCtrl,
+        upiCtrl: upiCtrl,
         onSave: () async {
           final success = await profile.updateProfile(
             shopName: shopCtrl.text.trim(),
@@ -438,6 +452,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ? null
                 : addressCtrl.text.trim(),
             gstNumber: gstCtrl.text.trim().isEmpty ? null : gstCtrl.text.trim(),
+            upiId: upiCtrl.text.trim().isEmpty ? null : upiCtrl.text.trim(),
           );
 
           // Also update AuthProvider so the dashboard header is in sync
@@ -763,6 +778,7 @@ class _EditProfileSheet extends StatefulWidget {
   final TextEditingController emailCtrl;
   final TextEditingController addressCtrl;
   final TextEditingController gstCtrl;
+  final TextEditingController upiCtrl;
   final Future<bool> Function() onSave;
 
   const _EditProfileSheet({
@@ -772,6 +788,7 @@ class _EditProfileSheet extends StatefulWidget {
     required this.emailCtrl,
     required this.addressCtrl,
     required this.gstCtrl,
+    required this.upiCtrl,
     required this.onSave,
   });
 
@@ -861,6 +878,11 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                     ctrl: widget.gstCtrl,
                     label: 'GST Number (optional)',
                     icon: Icons.receipt_outlined),
+                const SizedBox(height: 12),
+                _inputField(
+                    ctrl: widget.upiCtrl,
+                    label: 'UPI ID (e.g. myshop@paytm)',
+                    icon: Icons.qr_code),
                 const SizedBox(height: 24),
 
                 SizedBox(

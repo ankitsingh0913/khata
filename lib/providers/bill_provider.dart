@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:khata/services/api_services/bill_api_service.dart';
 import 'package:uuid/uuid.dart';
 import 'package:khata/models/bill.dart';
 import 'package:khata/models/bill_item.dart';
@@ -8,7 +9,7 @@ import 'package:khata/models/payment.dart';
 import 'package:khata/config/app_constants.dart';
 import 'package:khata/services/database_service.dart';
 
-class BillProvider with ChangeNotifier {
+  class BillProvider with ChangeNotifier {
   final DatabaseService _db = DatabaseService.instance;
 
   List<Bill> _bills = [];
@@ -40,8 +41,34 @@ class BillProvider with ChangeNotifier {
     _error = null;
 
     try {
+      // 1. Instantly load from local SQLite (Offline First)
       _bills = await _db.getAllBills(limit: limit);
       _unpaidBills = await _db.getUnpaidBills();
+      notifyListeners(); // Update UI immediately
+
+      // 2. Fetch updates from Spring Boot backend in the background
+      final remoteBills = await BillApiService.getAllBills();
+      
+      if (remoteBills != null && remoteBills.isNotEmpty) {
+        // Here you would typically sync new records to SQLite.
+        // For simplicity, we just safely refresh the memory list from local DB 
+        // after saving the remote bills to local DB.
+        
+        for (var bill in remoteBills) {
+          final localBill = await _db.getBillById(bill.id);
+          if (localBill == null) {
+            // Bill exists on server but not locally, save it
+            await _db.insertBill(bill);
+          } else if (localBill.updatedAt.isBefore(bill.updatedAt)) {
+             // Server has a newer version of the bill (e.g. payment was made on another device)
+             await _db.updateBill(bill);
+          }
+        }
+        
+        // Reload fresh data from local DB after sync
+        _bills = await _db.getAllBills(limit: limit);
+        _unpaidBills = await _db.getUnpaidBills();
+      }
     } catch (e) {
       _error = e.toString();
     }
@@ -54,7 +81,9 @@ class BillProvider with ChangeNotifier {
     _isLoading = true;
 
     try {
+      // Load offline first
       _bills = await _db.getBillsByCustomer(customerId);
+      // Background sync would follow the same pattern as above here if needed
     } catch (e) {
       _error = e.toString();
     }
@@ -124,6 +153,18 @@ class BillProvider with ChangeNotifier {
       _currentBill = bill;
       _bills.insert(0, bill);
       _unpaidBills.insert(0, bill);
+
+      // NEW: Background sync to Spring Boot
+      // We do not await this, so the UI can proceed immediately
+      BillApiService.createBill(bill).then((remoteBill) {
+        if (remoteBill != null) {
+          // If server gives us an updated bill (e.g. standardizing IDs), we can update local DB
+          // For now, simple logging is enough since Spring Boot uses the same fields
+          if (kDebugMode) {
+            print("Successfully synced UPI bill to backend: ${remoteBill.id}");
+          }
+        }
+      });
 
       clearCart();
 
@@ -326,6 +367,15 @@ class BillProvider with ChangeNotifier {
       if (_paymentType == AppConstants.paymentCredit) {
         _unpaidBills.insert(0, bill);
       }
+
+      // NEW: Sync to backend in the background
+      BillApiService.createBill(bill).then((remoteBill) {
+        if (remoteBill != null) {
+          if (kDebugMode) {
+            print("Successfully synced Cash/Credit bill to backend: ${remoteBill.id}");
+          }
+        }
+      });
 
       clearCart();
 

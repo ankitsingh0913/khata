@@ -14,7 +14,7 @@ import 'package:khata/widgets/custom_text_field.dart';
 import 'package:khata/screens/customers/add_customer_screen.dart';
 import 'package:khata/widgets/cash_payment_confirmation_dialog.dart';
 import 'bill_details_screen.dart';
-import 'upi_demo_payment_screen.dart';
+import 'upi_payment_screen.dart';
 import 'pay_later_confirmation_screen.dart';
 
 class CreateBillScreen extends StatefulWidget {
@@ -65,82 +65,68 @@ class _CreateBillScreenState extends State<CreateBillScreen> {
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Select Payment Method',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 20),
-            _buildPaymentOption(
-              icon: Icons.money,
-              title: 'Cash',
-              subtitle: 'Pay with cash',
-              value: AppConstants.paymentCash,
-              selected: billProvider.paymentType == AppConstants.paymentCash,
-              onTap: () {
-                billProvider.setPaymentType(AppConstants.paymentCash);
-                Navigator.pop(context);
-              },
-            ),
-            _buildPaymentOption(
-              icon: Icons.qr_code,
-              title: 'UPI',
-              subtitle: 'Pay via UPI (Demo Mode)', // UPDATED subtitle
-              value: AppConstants.paymentUpi,
-              selected: billProvider.paymentType == AppConstants.paymentUpi,
-              onTap: () {
-                billProvider.setPaymentType(AppConstants.paymentUpi);
-                Navigator.pop(context);
-              },
-              // ADD this optional parameter to show demo badge
-              trailing: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppTheme.warningColor,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: const Text(
-                  'DEMO',
-                  style: TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Select Payment Method',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-            ),
-            _buildPaymentOption(
-              icon: Icons.credit_card,
-              title: 'Card',
-              subtitle: 'Pay with card',
-              value: AppConstants.paymentCard,
-              selected: billProvider.paymentType == AppConstants.paymentCard,
-              onTap: () {
-                billProvider.setPaymentType(AppConstants.paymentCard);
-                Navigator.pop(context);
-              },
-            ),
-            if (billProvider.selectedCustomer != null)
+              const SizedBox(height: 20),
               _buildPaymentOption(
-                icon: Icons.schedule,  // Changed from wallet icon
-                title: 'Pay Later (Udhaar)',
-                subtitle: 'Add to ${billProvider.selectedCustomer!.name}\'s dues',
-                value: AppConstants.paymentCredit,
-                selected: billProvider.paymentType == AppConstants.paymentCredit,
-                isCredit: true,
+                icon: Icons.money,
+                title: 'Cash',
+                subtitle: 'Pay with cash',
+                value: AppConstants.paymentCash,
+                selected: billProvider.paymentType == AppConstants.paymentCash,
                 onTap: () {
-                  billProvider.setPaymentType(AppConstants.paymentCredit);
+                  billProvider.setPaymentType(AppConstants.paymentCash);
                   Navigator.pop(context);
                 },
               ),
-            const SizedBox(height: 20),
-          ],
+              _buildPaymentOption(
+                icon: Icons.qr_code,
+                title: 'UPI',
+                subtitle: 'Pay via UPI QR Code',
+                value: AppConstants.paymentUpi,
+                selected: billProvider.paymentType == AppConstants.paymentUpi,
+                onTap: () {
+                  billProvider.setPaymentType(AppConstants.paymentUpi);
+                  Navigator.pop(context);
+                },
+              ),
+              _buildPaymentOption(
+                icon: Icons.credit_card,
+                title: 'Card',
+                subtitle: 'Pay with card',
+                value: AppConstants.paymentCard,
+                selected: billProvider.paymentType == AppConstants.paymentCard,
+                onTap: () {
+                  billProvider.setPaymentType(AppConstants.paymentCard);
+                  Navigator.pop(context);
+                },
+              ),
+              if (billProvider.selectedCustomer != null)
+                _buildPaymentOption(
+                  icon: Icons.schedule,
+                  title: 'Pay Later (Udhaar)',
+                  subtitle: 'Add to ${billProvider.selectedCustomer!.name}\'s dues',
+                  value: AppConstants.paymentCredit,
+                  selected: billProvider.paymentType == AppConstants.paymentCredit,
+                  isCredit: true,
+                  onTap: () {
+                    billProvider.setPaymentType(AppConstants.paymentCredit);
+                    Navigator.pop(context);
+                  },
+                ),
+              const SizedBox(height: 20),
+            ],
+          ),
         ),
       ),
     );
@@ -184,14 +170,25 @@ class _CreateBillScreenState extends State<CreateBillScreen> {
         ),
         title: Row(
           children: [
-            Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+            Expanded(
+              child: Text(
+                title, 
+                style: const TextStyle(fontWeight: FontWeight.w600),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
             if (trailing != null) ...[
               const SizedBox(width: 8),
               trailing,
             ],
           ],
         ),
-        subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
+        subtitle: Text(
+          subtitle, 
+          style: const TextStyle(fontSize: 12),
+          overflow: TextOverflow.ellipsis,
+          maxLines: 2,
+        ),
         trailing: selected
             ? const Icon(Icons.check_circle, color: AppTheme.successColor)
             : const Icon(Icons.circle_outlined, color: AppTheme.borderColor),
@@ -359,7 +356,7 @@ class _CreateBillScreenState extends State<CreateBillScreen> {
 
     if (bill != null && mounted) {
       // Show UPI payment screen
-      final upiResult = await UpiDemoPaymentScreen.show(
+      final upiResult = await UpiPaymentScreen.show(
         context,
         bill: bill,
       );

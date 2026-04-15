@@ -26,6 +26,7 @@ class ProfileApiService {
     String? email,
     String? address,
     String? gstNumber,
+    String? upiId,
   }) async {
     try {
       final response = await ApiClient.dio.patch(
@@ -37,6 +38,7 @@ class ProfileApiService {
           if (email != null) 'email': email,
           if (address != null) 'address': address,
           if (gstNumber != null) 'gstNumber': gstNumber,
+          if (upiId != null) 'upiId': upiId,
         }),
       );
       return response.statusCode == 200;
