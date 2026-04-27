@@ -12,6 +12,8 @@ import '../../services/pdf_service.dart';
 import '../../services/share_service.dart';
 import '../loans/payment_screen.dart';
 import '../dashboard/dashboard_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 
 class BillDetailScreen extends StatefulWidget {
   final String billId;
@@ -71,6 +73,20 @@ class _BillDetailScreenState extends State<BillDetailScreen> {
     return true;
   }
 
+  Future<void> _launchReceiptUrl(String url) async {
+  final uri = Uri.parse(url);
+  if (await canLaunchUrl(uri)) {
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  } else {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open the receipt link')),
+      );
+    }
+  }
+}
+
+
   Future<void> _shareBill() async {
     if (_bill == null) return;
 
@@ -88,6 +104,16 @@ class _BillDetailScreenState extends State<BillDetailScreen> {
                 Navigator.pop(context);
                 final file = await PdfService.generateBillPdf(_bill!);
                 await ShareService.sharePdf(file, text: 'Invoice ${_bill!.billNumber}');
+              },
+            ),
+            if (_bill?.receiptUrl != null && _bill!.receiptUrl!.isNotEmpty)
+            ListTile(
+              leading: const Icon(Icons.cloud_outlined, color: AppTheme.primaryColor),
+              title: const Text('View Online Receipt'),
+              subtitle: const Text('Open S3 PDF link'),
+              onTap: () async {
+                Navigator.pop(context);
+                await _launchReceiptUrl(_bill!.receiptUrl!);
               },
             ),
             ListTile(
@@ -237,6 +263,21 @@ class _BillDetailScreenState extends State<BillDetailScreen> {
                                 color: AppTheme.successColor.withOpacity(0.8),
                               ),
                             ),
+                            if (bill.receiptUrl != null && bill.receiptUrl!.isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              TextButton.icon(
+                                onPressed: () => _launchReceiptUrl(bill.receiptUrl!),
+                                icon: const Icon(Icons.cloud_outlined, size: 16),
+                                label: const Text('View Online Receipt'),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: AppTheme.successColor,
+                                  backgroundColor: AppTheme.successColor.withOpacity(0.1),
+                                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                                  minimumSize: Size.zero,
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),

@@ -27,7 +27,18 @@ class DatabaseService {
       path,
       version: AppConstants.dbVersion,
       onCreate: _createDB,
+      onUpgrade: _upgradeDB,
     );
+  }
+
+  Future _upgradeDB(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      try {
+        await db.execute('ALTER TABLE bills ADD COLUMN receiptUrl TEXT;');
+      } catch (_) {
+        // Ignore if column already exists during dev
+      }
+    }
   }
 
   Future _createDB(Database db, int version) async {
@@ -81,6 +92,7 @@ class DatabaseService {
         paymentType TEXT NOT NULL,
         status TEXT NOT NULL,
         notes TEXT,
+        receiptUrl TEXT,
         createdAt TEXT NOT NULL,
         updatedAt TEXT NOT NULL,
         FOREIGN KEY (customerId) REFERENCES customers (id)

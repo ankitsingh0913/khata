@@ -9,7 +9,7 @@ import 'package:khata/models/payment.dart';
 import 'package:khata/config/app_constants.dart';
 import 'package:khata/services/database_service.dart';
 
-  class BillProvider with ChangeNotifier {
+class BillProvider with ChangeNotifier {
   final DatabaseService _db = DatabaseService.instance;
 
   List<Bill> _bills = [];
@@ -48,23 +48,23 @@ import 'package:khata/services/database_service.dart';
 
       // 2. Fetch updates from Spring Boot backend in the background
       final remoteBills = await BillApiService.getAllBills();
-      
+
       if (remoteBills != null && remoteBills.isNotEmpty) {
         // Here you would typically sync new records to SQLite.
-        // For simplicity, we just safely refresh the memory list from local DB 
+        // For simplicity, we just safely refresh the memory list from local DB
         // after saving the remote bills to local DB.
-        
+
         for (var bill in remoteBills) {
           final localBill = await _db.getBillById(bill.id);
           if (localBill == null) {
             // Bill exists on server but not locally, save it
             await _db.insertBill(bill);
           } else if (localBill.updatedAt.isBefore(bill.updatedAt)) {
-             // Server has a newer version of the bill (e.g. payment was made on another device)
-             await _db.updateBill(bill);
+            // Server has a newer version of the bill (e.g. payment was made on another device)
+            await _db.updateBill(bill);
           }
         }
-        
+
         // Reload fresh data from local DB after sync
         _bills = await _db.getAllBills(limit: limit);
         _unpaidBills = await _db.getUnpaidBills();
@@ -93,7 +93,8 @@ import 'package:khata/services/database_service.dart';
   }
 
   void addToCart(Product product, {int quantity = 1}) {
-    final existingIndex = _cartItems.indexWhere((item) => item.productId == product.id);
+    final existingIndex =
+        _cartItems.indexWhere((item) => item.productId == product.id);
 
     if (existingIndex != -1) {
       final existingItem = _cartItems[existingIndex];
@@ -127,7 +128,8 @@ import 'package:khata/services/database_service.dart';
       final billNumber = await _db.generateBillNumber();
       final billId = const Uuid().v4();
 
-      final items = _cartItems.map((item) => item.copyWith(billId: billId)).toList();
+      final items =
+          _cartItems.map((item) => item.copyWith(billId: billId)).toList();
 
       // UPI bills start as unpaid until payment is confirmed
       const status = AppConstants.billUnpaid;
@@ -156,12 +158,14 @@ import 'package:khata/services/database_service.dart';
 
       // NEW: Background sync to Spring Boot
       // We do not await this, so the UI can proceed immediately
-      BillApiService.createBill(bill).then((remoteBill) {
-        if (remoteBill != null) {
+      BillApiService.createBill(bill).then((remoteBill) async{
+        if (remoteBill != null && remoteBill.receiptUrl != null) {
+          await _db.updateBill(remoteBill);
+          notifyListeners();
           // If server gives us an updated bill (e.g. standardizing IDs), we can update local DB
           // For now, simple logging is enough since Spring Boot uses the same fields
           if (kDebugMode) {
-            print("Successfully synced UPI bill to backend: ${remoteBill.id}");
+            print("Successfully synced UPI bill to backend: ${remoteBill.receiptUrl}");
           }
         }
       });
@@ -202,12 +206,14 @@ import 'package:khata/services/database_service.dart';
       final billData = billResult.first;
       final total = (billData['total'] as num?)?.toDouble() ?? 0.0;
       final customerId = billData['customerId'] as String?;
-      final currentPaidAmount = (billData['paidAmount'] as num?)?.toDouble() ?? 0.0;
+      final currentPaidAmount =
+          (billData['paidAmount'] as num?)?.toDouble() ?? 0.0;
       final paymentType = billData['paymentType'] as String?;
 
       // Use transaction for atomic updates
       await db.transaction((txn) async {
-        final newStatus = isPaid ? AppConstants.billPaid : AppConstants.billUnpaid;
+        final newStatus =
+            isPaid ? AppConstants.billPaid : AppConstants.billUnpaid;
         final newPaidAmount = isPaid ? total : 0.0;
 
         // Update bill
@@ -234,7 +240,8 @@ import 'package:khata/services/database_service.dart';
 
           if (customerResult.isNotEmpty) {
             final currentPending =
-                (customerResult.first['pendingAmount'] as num?)?.toDouble() ?? 0.0;
+                (customerResult.first['pendingAmount'] as num?)?.toDouble() ??
+                    0.0;
 
             double newPending;
             if (isPaid) {
@@ -331,7 +338,8 @@ import 'package:khata/services/database_service.dart';
       final billNumber = await _db.generateBillNumber();
       final billId = const Uuid().v4();
 
-      final items = _cartItems.map((item) => item.copyWith(billId: billId)).toList();
+      final items =
+          _cartItems.map((item) => item.copyWith(billId: billId)).toList();
 
       String status;
       double paidAmount;
@@ -369,10 +377,12 @@ import 'package:khata/services/database_service.dart';
       }
 
       // NEW: Sync to backend in the background
-      BillApiService.createBill(bill).then((remoteBill) {
-        if (remoteBill != null) {
+      BillApiService.createBill(bill).then((remoteBill) async{
+        if (remoteBill != null && remoteBill.receiptUrl != null) {
+          notifyListeners();
+          await _db.updateBill(remoteBill);
           if (kDebugMode) {
-            print("Successfully synced Cash/Credit bill to backend: ${remoteBill.id}");
+            print("Successfully synced Cash/Credit bill to backend: ${remoteBill.receiptUrl}");
           }
         }
       });
@@ -414,17 +424,21 @@ import 'package:khata/services/database_service.dart';
         notes: notes,
       );
 
-      // Insert payment (this handles bill and customer updates in a transaction)
+      // Insert payment (this handles local bill and customer updates in a transaction)
       await _db.insertPayment(payment);
 
-      // Reload data AFTER transaction is complete
-      // Use Future.microtask to ensure transaction is fully closed
+      // Step 4: Sync payment to backend in the background
+      // This ensures PostgreSQL stays in sync with your phone's SQLite
+      BillApiService.recordPayment(payment.toMap()).then((success) {
+        if (success && kDebugMode) {
+          print("Cloud Sync Success: Payment for Bill ${payment.billId} recorded.");
+        }
+      });
+
+      // Reload local data to reflect changes in UI
       await Future.microtask(() async {
-        // Reload bills list
         _bills = await _db.getAllBills();
         _unpaidBills = await _db.getUnpaidBills();
-
-        // Update current bill if it's the same
         if (_currentBill?.id == billId) {
           _currentBill = await _db.getBillById(billId);
         }

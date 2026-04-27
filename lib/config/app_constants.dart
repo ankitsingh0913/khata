@@ -16,5 +16,5 @@ class AppConstants {
 
   // Database
   static const String dbName = 'smart_shopkeeper.db';
-  static const int dbVersion = 1;
+  static const int dbVersion = 2;
 }

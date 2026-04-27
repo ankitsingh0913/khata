@@ -18,6 +18,7 @@ class Bill {
   final String? notes;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final String? receiptUrl;
 
   Bill({
     required this.id,
@@ -36,6 +37,7 @@ class Bill {
     this.notes,
     DateTime? createdAt,
     DateTime? updatedAt,
+    this.receiptUrl,
   })  : createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now();
 
@@ -60,6 +62,7 @@ class Bill {
       'notes': notes,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
+      'receiptUrl': receiptUrl,
     };
   }
 
@@ -89,6 +92,7 @@ class Bill {
       updatedAt: json["updatedAt"] != null
           ? DateTime.parse(json["updatedAt"])
           : DateTime.now(),
+      receiptUrl: json["receiptUrl"],
     );
   }
 
@@ -112,6 +116,7 @@ class Bill {
       notes: map['notes'],
       createdAt: DateTime.parse(map['createdAt']),
       updatedAt: DateTime.parse(map['updatedAt']),
+      receiptUrl: map['receiptUrl'],
     );
   }
 
