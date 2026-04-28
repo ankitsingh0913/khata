@@ -5,6 +5,10 @@ import 'package:khata/services/api_services/profile_api_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthProvider with ChangeNotifier {
+  static const String _accessTokenExpiryKey = 'accessTokenExpiry';
+  static const String _refreshTokenExpiryKey = 'refreshTokenExpiry';
+  static const String _authExpiresAtKey = 'authExpiresAt';
+
   bool _isLoggedIn = false;
   String? _shopName;
   String? _ownerName;
@@ -27,7 +31,8 @@ class AuthProvider with ChangeNotifier {
       if (accessToken != null && refreshToken != null) {
         _isLoggedIn = true;
         _shopName = prefs.getString('shopName');
-        _ownerName = prefs.getString('ownerName') ?? prefs.getString('fullName');
+        _ownerName =
+            prefs.getString('ownerName') ?? prefs.getString('fullName');
         _phone = prefs.getString('phone');
       } else {
         _isLoggedIn = false;
@@ -123,12 +128,44 @@ class AuthProvider with ChangeNotifier {
 
       if (result == null) return false;
 
+      final accessToken = result["accessToken"] as String?;
+      final refreshToken = result["refreshToken"] as String?;
+      if (accessToken == null || refreshToken == null) {
+        debugPrint('Signup response missing tokens');
+        return false;
+      }
+
+      await TokenStorage.saveAccessToken(accessToken);
+      await TokenStorage.saveRefreshToken(refreshToken);
+
       final prefs = await SharedPreferences.getInstance();
 
       await prefs.setBool('isLoggedIn', true);
       await prefs.setString('shopName', shopName);
       await prefs.setString('ownerName', ownerName);
       await prefs.setString('phone', phone);
+      await prefs.setString('email', email);
+
+      final accessTokenExpiry = result["accessTokenExpiry"];
+      if (accessTokenExpiry != null) {
+        await prefs.setString(
+          _accessTokenExpiryKey,
+          accessTokenExpiry.toString(),
+        );
+      }
+
+      final refreshTokenExpiry = result["refreshTokenExpiry"];
+      if (refreshTokenExpiry != null) {
+        await prefs.setString(
+          _refreshTokenExpiryKey,
+          refreshTokenExpiry.toString(),
+        );
+      }
+
+      final authExpiresAt = result["expiresAt"] ?? result["expiry"];
+      if (authExpiresAt != null) {
+        await prefs.setString(_authExpiresAtKey, authExpiresAt.toString());
+      }
 
       _isLoggedIn = true;
       _shopName = shopName;
