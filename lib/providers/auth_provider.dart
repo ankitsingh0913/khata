@@ -127,6 +127,7 @@ class AuthProvider with ChangeNotifier {
 
       if (result == null) return false;
 
+
       final accessToken = result["accessToken"] as String?;
       final refreshToken = result["refreshToken"] as String?;
 
