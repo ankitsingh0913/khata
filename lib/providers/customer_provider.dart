@@ -96,9 +96,6 @@ class CustomerProvider with ChangeNotifier {
       _allCustomers.insert(0, customer);
       _customers.insert(0, customer);
       _customersWithDues = _customers.where((c) => c.pendingAmount > 0).toList();
-      if (customer.pendingAmount > 0) {
-        _customersWithDues.insert(0, customer);
-      }
       notifyListeners();
       return customer;
     } catch (e) {
