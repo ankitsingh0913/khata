@@ -31,8 +31,7 @@ class AuthProvider with ChangeNotifier {
       if (accessToken != null && refreshToken != null) {
         _isLoggedIn = true;
         _shopName = prefs.getString('shopName');
-        _ownerName =
-            prefs.getString('ownerName') ?? prefs.getString('fullName');
+        _ownerName = prefs.getString('ownerName') ?? prefs.getString('fullName');
         _phone = prefs.getString('phone');
       } else {
         _isLoggedIn = false;
@@ -130,6 +129,7 @@ class AuthProvider with ChangeNotifier {
 
       final accessToken = result["accessToken"] as String?;
       final refreshToken = result["refreshToken"] as String?;
+
       if (accessToken == null || refreshToken == null) {
         debugPrint('Signup response missing tokens');
         return false;
