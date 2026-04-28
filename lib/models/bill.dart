@@ -86,12 +86,10 @@ class Bill {
           AppConstants.paymentCash,
       status: json["status"]?.toString().toUpperCase() ?? AppConstants.billUnpaid,
       notes: json["notes"],
-      createdAt: json["createdAt"] != null
-          ? DateTime.parse(json["createdAt"])
-          : DateTime.now(),
-      updatedAt: json["updatedAt"] != null
-          ? DateTime.parse(json["updatedAt"])
-          : DateTime.now(),
+        createdAt: DateTime.tryParse(json["createdAt"]?.toString() ?? '') ??
+          DateTime.now(),
+        updatedAt: DateTime.tryParse(json["updatedAt"]?.toString() ?? '') ??
+          DateTime.now(),
       receiptUrl: json["receiptUrl"],
     );
   }
@@ -135,6 +133,7 @@ class Bill {
     String? paymentType,
     String? status,
     String? notes,
+    String? receiptUrl
   }) {
     return Bill(
       id: id ?? this.id,
@@ -151,6 +150,7 @@ class Bill {
       paymentType: paymentType ?? this.paymentType,
       status: status ?? this.status,
       notes: notes ?? this.notes,
+      receiptUrl: receiptUrl ?? this.receiptUrl,
       createdAt: createdAt,
       updatedAt: DateTime.now(),
     );

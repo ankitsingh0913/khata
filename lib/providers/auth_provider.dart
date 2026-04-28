@@ -27,7 +27,7 @@ class AuthProvider with ChangeNotifier {
       if (accessToken != null && refreshToken != null) {
         _isLoggedIn = true;
         _shopName = prefs.getString('shopName');
-        _ownerName = prefs.getString('ownerName');
+        _ownerName = prefs.getString('ownerName') ?? prefs.getString('fullName');
         _phone = prefs.getString('phone');
       } else {
         _isLoggedIn = false;
@@ -63,7 +63,7 @@ class AuthProvider with ChangeNotifier {
       }
       await TokenStorage.saveAccessToken(accessToken);
       await TokenStorage.saveRefreshToken(refreshToken);
-      print(result);
+      debugPrint('Login successful, tokens saved');
 
       final prefs = await SharedPreferences.getInstance();
 
@@ -84,7 +84,7 @@ class AuthProvider with ChangeNotifier {
           _shopName = shop;
         }
         if (owner != null) {
-          await prefs.setString('fullName', owner);
+          await prefs.setString('ownerName', owner);
           _ownerName = owner;
         }
         if (ph != null) {

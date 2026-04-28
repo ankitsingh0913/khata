@@ -90,16 +90,17 @@ class ProfileProvider with ChangeNotifier {
         upiId: upiId,
       );
 
-      // Even if API fails, update locally so the UI reflects changes
-      _shopName = shopName;
-      _fullName = fullName;
-      _phone = phone;
-      _email = email;
-      _address = address;
-      _gstNumber = gstNumber;
-      _upiId = upiId;
+      if (success) {
+        _shopName = shopName;
+        _fullName = fullName;
+        _phone = phone;
+        _email = email;
+        _address = address;
+        _gstNumber = gstNumber;
+        _upiId = upiId;
 
-      await _persistLocally();
+        await _persistLocally();
+      }
     } catch (e) {
       _error = e.toString();
       debugPrint('ProfileProvider.updateProfile error: $e');
@@ -134,13 +135,15 @@ class ProfileProvider with ChangeNotifier {
   }
 
   Future<void> _persistLocally() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (_shopName != null) await prefs.setString('shopName', _shopName!);
-    if (_fullName != null) await prefs.setString('fullName', _fullName!);
-    if (_phone != null) await prefs.setString('phone', _phone!);
-    if (_email != null) await prefs.setString('email', _email!);
-    if (_address != null) await prefs.setString('address', _address!);
-    if (_gstNumber != null) await prefs.setString('gstNumber', _gstNumber!);
-    if (_upiId != null) await prefs.setString('upiId', _upiId!);
+    Future<void> _persistLocally() async {
+      final prefs = await SharedPreferences.getInstance();
+      if (_shopName != null) { await prefs.setString('shopName', _shopName!); } else { await prefs.remove('shopName'); }
+      if (_fullName != null) { await prefs.setString('fullName', _fullName!); } else { await prefs.remove('fullName'); }
+      if (_phone != null) { await prefs.setString('phone', _phone!); } else { await prefs.remove('phone'); }
+      if (_email != null) { await prefs.setString('email', _email!); } else { await prefs.remove('email'); }
+      if (_address != null) { await prefs.setString('address', _address!); } else { await prefs.remove('address'); }
+      if (_gstNumber != null) { await prefs.setString('gstNumber', _gstNumber!); } else { await prefs.remove('gstNumber'); }
+      if (_upiId != null) { await prefs.setString('upiId', _upiId!); } else { await prefs.remove('upiId'); }
+    }
   }
 }

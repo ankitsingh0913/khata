@@ -4,7 +4,7 @@ import 'package:khata/models/bill.dart';
 import 'package:khata/services/api_services/customer_api_service.dart';
 
 class CustomerProvider with ChangeNotifier {
-
+  List<Customer> _allCustomers = [];
   List<Customer> _customers = [];
   List<Customer> _customersWithDues = [];
   Customer? _selectedCustomer;
@@ -30,11 +30,12 @@ class CustomerProvider with ChangeNotifier {
       _isLoading = true;
       _error = null;
       notifyListeners();
-      _customers = await CustomerApiService.getCustomers();
+      _allCustomers = await CustomerApiService.getCustomers();
+      _customers = List<Customer>.from(_allCustomers);
 
       // customers who have pending dues
       _customersWithDues =
-          _customers.where((c) => c.pendingAmount > 0).toList();
+          _allCustomers.where((c) => c.pendingAmount > 0).toList();
     } catch (e) {
       _error = e.toString();
     }
@@ -49,9 +50,9 @@ class CustomerProvider with ChangeNotifier {
   -----------------------------------------
   */
   Future<void> searchCustomers(String query) async {
-
     if (query.isEmpty) {
-      await loadCustomers();
+      _customers = List<Customer>.from(_allCustomers);
+      notifyListeners();
       return;
     }
 
@@ -60,12 +61,10 @@ class CustomerProvider with ChangeNotifier {
 
     try {
       final lower = query.toLowerCase();
-      _customers = _customers
+      _customers = _allCustomers
           .where((c) =>
-      c.name.toLowerCase().contains(lower) ||
-          c.phone.contains(query))
+              c.name.toLowerCase().contains(lower) || c.phone.contains(query))
           .toList();
-
     } catch (e) {
       _error = e.toString();
     }
@@ -94,7 +93,12 @@ class CustomerProvider with ChangeNotifier {
       };
 
       final customer = await CustomerApiService.createCustomer(body);
+      _allCustomers.insert(0, customer);
       _customers.insert(0, customer);
+      _customersWithDues = _customers.where((c) => c.pendingAmount > 0).toList();
+      if (customer.pendingAmount > 0) {
+        _customersWithDues.insert(0, customer);
+      }
       notifyListeners();
       return customer;
     } catch (e) {
@@ -130,7 +134,10 @@ class CustomerProvider with ChangeNotifier {
   Future<bool> deleteCustomer(String id) async {
     try {
       await CustomerApiService.deleteCustomer(id);
+      _allCustomers.removeWhere((c) => c.id == id);
       _customers.removeWhere((c) => c.id == id);
+      _customersWithDues.removeWhere((c) => c.id == id);
+      _customersWithDues = _customers.where((c) => c.pendingAmount > 0).toList();
       if (_selectedCustomer?.id == id) {
         _selectedCustomer = null;
       }
@@ -140,7 +147,6 @@ class CustomerProvider with ChangeNotifier {
       _error = e.toString();
       notifyListeners();
       return false;
-
     }
   }
 
@@ -161,7 +167,6 @@ class CustomerProvider with ChangeNotifier {
   -----------------------------------------
   */
   double get totalPendingAmount {
-    return _customersWithDues.fold(
-        0.0, (sum, c) => sum + c.pendingAmount);
+    return _customersWithDues.fold(0.0, (sum, c) => sum + c.pendingAmount);
   }
 }

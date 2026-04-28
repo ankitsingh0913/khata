@@ -11,6 +11,7 @@ import 'package:khata/services/database_service.dart';
 
 class BillProvider with ChangeNotifier {
   final DatabaseService _db = DatabaseService.instance;
+  static const Duration _billSyncBaseDelay = Duration(seconds: 2);
 
   List<Bill> _bills = [];
   List<Bill> _unpaidBills = [];
@@ -21,6 +22,8 @@ class BillProvider with ChangeNotifier {
   double _discount = 0.0;
   bool _isLoading = false;
   String? _error;
+  final Map<String, int> _billSyncRetryCounts = {};
+  final Set<String> _scheduledBillSyncs = <String>{};
 
   List<Bill> get bills => _bills;
   List<Bill> get unpaidBills => _unpaidBills;
@@ -35,6 +38,81 @@ class BillProvider with ChangeNotifier {
   double get subtotal => _cartItems.fold(0.0, (sum, item) => sum + item.total);
   double get total => subtotal - _discount;
   int get totalItems => _cartItems.fold(0, (sum, item) => sum + item.quantity);
+
+  Duration _billSyncRetryDelay(int attempt) {
+    final multiplier = 1 << (attempt - 1);
+    final seconds = _billSyncBaseDelay.inSeconds * multiplier;
+    const maxSeconds = 300;
+    return Duration(seconds: seconds > maxSeconds ? maxSeconds : seconds);
+  }
+
+  void _scheduleBillSync(Bill bill, {Duration delay = Duration.zero}) {
+    if (delay > Duration.zero && !_scheduledBillSyncs.add(bill.id)) {
+      return;
+    }
+
+    Future<void>.delayed(delay, () async {
+      _scheduledBillSyncs.remove(bill.id);
+      await _syncBillToBackend(bill);
+    });
+  }
+
+  Future<void> _syncBillToBackend(Bill bill) async {
+    try {
+      final remoteBill = await BillApiService.createBill(bill);
+      if (remoteBill == null) {
+        throw StateError(
+          'Bill sync returned no bill payload for ${bill.billNumber}',
+        );
+      }
+
+      _billSyncRetryCounts.remove(bill.id);
+      _scheduledBillSyncs.remove(bill.id);
+
+      await _db.updateBill(remoteBill);
+      notifyListeners();
+
+      if (kDebugMode) {
+        debugPrint(
+          "Successfully synced bill to backend: ${remoteBill.receiptUrl ?? remoteBill.id}",
+        );
+      }
+    } catch (error, stackTrace) {
+      final attempt = (_billSyncRetryCounts[bill.id] ?? 0) + 1;
+      _billSyncRetryCounts[bill.id] = attempt;
+
+      final retryDelay = _billSyncRetryDelay(attempt);
+      _error =
+          'Failed to sync bill ${bill.billNumber} to backend (attempt $attempt): $error';
+
+      FlutterError.reportError(
+        FlutterErrorDetails(
+          exception: error,
+          stack: stackTrace,
+          library: 'bill_provider',
+          context: ErrorDescription(
+            'while syncing bill ${bill.id} to the backend',
+          ),
+          informationCollector: () sync* {
+            yield StringProperty('billId', bill.id);
+            yield StringProperty('billNumber', bill.billNumber);
+            yield IntProperty('retryAttempt', attempt);
+            yield StringProperty('nextRetryIn', retryDelay.toString());
+          },
+        ),
+      );
+
+      if (kDebugMode) {
+        debugPrint(
+          'Bill sync failed for ${bill.id} (attempt $attempt): $error',
+        );
+        debugPrintStack(stackTrace: stackTrace);
+      }
+
+      notifyListeners();
+      _scheduleBillSync(bill, delay: retryDelay);
+    }
+  }
 
   Future<void> loadBills({int? limit}) async {
     _isLoading = true;
@@ -156,19 +234,8 @@ class BillProvider with ChangeNotifier {
       _bills.insert(0, bill);
       _unpaidBills.insert(0, bill);
 
-      // NEW: Background sync to Spring Boot
-      // We do not await this, so the UI can proceed immediately
-      BillApiService.createBill(bill).then((remoteBill) async{
-        if (remoteBill != null && remoteBill.receiptUrl != null) {
-          await _db.updateBill(remoteBill);
-          notifyListeners();
-          // If server gives us an updated bill (e.g. standardizing IDs), we can update local DB
-          // For now, simple logging is enough since Spring Boot uses the same fields
-          if (kDebugMode) {
-            print("Successfully synced UPI bill to backend: ${remoteBill.receiptUrl}");
-          }
-        }
-      });
+      // Sync in the background so the UI can proceed immediately.
+      _scheduleBillSync(bill);
 
       clearCart();
 
@@ -376,16 +443,8 @@ class BillProvider with ChangeNotifier {
         _unpaidBills.insert(0, bill);
       }
 
-      // NEW: Sync to backend in the background
-      BillApiService.createBill(bill).then((remoteBill) async{
-        if (remoteBill != null && remoteBill.receiptUrl != null) {
-          notifyListeners();
-          await _db.updateBill(remoteBill);
-          if (kDebugMode) {
-            print("Successfully synced Cash/Credit bill to backend: ${remoteBill.receiptUrl}");
-          }
-        }
-      });
+      // Sync in the background so the UI can proceed immediately.
+      _scheduleBillSync(bill);
 
       clearCart();
 
@@ -431,7 +490,8 @@ class BillProvider with ChangeNotifier {
       // This ensures PostgreSQL stays in sync with your phone's SQLite
       BillApiService.recordPayment(payment.toMap()).then((success) {
         if (success && kDebugMode) {
-          print("Cloud Sync Success: Payment for Bill ${payment.billId} recorded.");
+          print(
+              "Cloud Sync Success: Payment for Bill ${payment.billId} recorded.");
         }
       });
 

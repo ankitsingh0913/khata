@@ -156,10 +156,18 @@ class _UpiPaymentScreenState extends State<UpiPaymentScreen> {
     try {
       // Update bill status to paid
       final billProvider = context.read<BillProvider>();
-      await billProvider.updateBillPaymentStatus(
+      final updated = await billProvider.updateBillPaymentStatus(
         billId: widget.bill.id,
         isPaid: true,
       );
+      if (!updated) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to update payment status')),
+          );
+        }
+        return;
+      }
 
       final txnId = _qrData?.transactionRef ?? 'UPI_${DateTime.now().millisecondsSinceEpoch}';
 
@@ -205,10 +213,18 @@ class _UpiPaymentScreenState extends State<UpiPaymentScreen> {
 
     if (confirm == true && mounted) {
       final billProvider = context.read<BillProvider>();
-      await billProvider.updateBillPaymentStatus(
+      final updated = await billProvider.updateBillPaymentStatus(
         billId: widget.bill.id,
         isPaid: false,
       );
+      if (!updated) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to mark bill as unpaid')),
+          );
+        }
+        return;
+      }
 
       Navigator.pop(
         context,

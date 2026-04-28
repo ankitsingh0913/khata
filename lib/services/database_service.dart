@@ -33,10 +33,10 @@ class DatabaseService {
 
   Future _upgradeDB(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
-      try {
+      final columns = await db.rawQuery('PRAGMA table_info(bills)');
+      final hasReceiptUrl = columns.any((column) => column['name'] == 'receiptUrl');
+      if (!hasReceiptUrl) {
         await db.execute('ALTER TABLE bills ADD COLUMN receiptUrl TEXT;');
-      } catch (_) {
-        // Ignore if column already exists during dev
       }
     }
   }

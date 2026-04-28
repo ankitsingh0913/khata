@@ -110,6 +110,7 @@ class _OtpScreenState extends State<OtpScreen> {
       password: widget.password,
     );
 
+    if (!mounted) return;
     setState(() => _isLoading = false);
 
     if (success && mounted) {
@@ -140,17 +141,17 @@ class _OtpScreenState extends State<OtpScreen> {
     // Simulate sending OTP
     await Future.delayed(const Duration(seconds: 1));
 
+    if (!mounted) return;
     setState(() => _isResending = false);
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('OTP sent to ${widget.email}'),
-          backgroundColor: AppTheme.successColor,
-        ),
-      );
-      _startResendTimer();
-    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('OTP sent to ${widget.email}'),
+        backgroundColor: AppTheme.successColor,
+      ),
+    );
+    _startResendTimer();
   }
 
   @override

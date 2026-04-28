@@ -16,22 +16,24 @@ class AuthApiService {
 
     final url = Uri.parse("$baseUrl/signup");
 
-    final response = await http.post(
-      url,
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: jsonEncode({
-        "shopName": shopName,
-        "fullName": ownerName,
-        "phone": phone,
-        "email": email,
-        "password": password
-      }),
-    );
+    http.Response response;
+    try {
+      response = await http.post(
+            url,
+            headers: {"Content-Type": "application/json"},
+            body: jsonEncode({"email": email, "password": password}),
+          )
+          .timeout(const Duration(seconds: 15));
+    } catch (_) {
+      return null;
+    }
 
     if (response.statusCode == 201 || response.statusCode == 200) {
-      return jsonDecode(response.body);
+      try {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } catch (_) {
+        return null;
+      }
     }
 
     return null;
@@ -45,19 +47,24 @@ class AuthApiService {
 
     final url = Uri.parse("$baseUrl/login");
 
-    final response = await http.post(
-      url,
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: jsonEncode({
-        "email": email,
-        "password": password
-      }),
-    );
+    http.Response response;
+    try {
+      response = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({"email": email, "password": password}),
+      )
+          .timeout(const Duration(seconds: 15));
+    } catch (_) {
+      return null;
+    }
 
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
+    if (response.statusCode == 201 || response.statusCode == 200) {
+      try {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } catch (_) {
+        return null;
+      }
     }
 
     return null;

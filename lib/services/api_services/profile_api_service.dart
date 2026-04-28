@@ -9,13 +9,27 @@ class ProfileApiService {
       final response = await ApiClient.dio.get('$_baseUrl/users/me');
       if (response.statusCode == 200) {
         print("PROFILE DATA: ${response.data}");
-        return response.data;
+        final responseData = response.data;
+        if (responseData is Map<String, dynamic>) {
+          if (responseData.containsKey('data')) {
+            final nestedData = responseData['data'];
+            if (nestedData is Map<String, dynamic>) {
+              return nestedData;
+            }
+            if (nestedData is Map) {
+              return Map<String, dynamic>.from(nestedData);
+            }
+            return null;
+          }
+          return responseData;
+        }
+        if (responseData is Map) {
+          return Map<String, dynamic>.from(responseData);
+        }
       }
     } catch (e) {
       // Return null on error — caller will handle gracefully
-    } finally {
-      
-    }
+    } finally {}
     return null;
   }
 

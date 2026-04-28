@@ -1,5 +1,4 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart';
 import 'package:khata/core/api/api_client.dart';
 import 'package:khata/models/bill.dart';
 
@@ -13,7 +12,7 @@ class BillApiService {
         return Bill.fromMap(response.data);
       }
     } catch (e) {
-      print('Error loading bill: $e');
+      debugPrint('Error loading bill: $e');
     }
     return null;
   }
@@ -31,7 +30,7 @@ class BillApiService {
                 })
             .toList(),
         'discount': bill.discount,
-        'tax': bill.tax ?? 0,
+        'tax': bill.tax,
         'paymentType': bill.paymentType,
         'paidAmount': bill.paidAmount,
         'notes': bill.notes,
@@ -40,11 +39,12 @@ class BillApiService {
         baseUrl,
         data: requestData,
       );
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 201)  {
         return Bill.fromMap(response.data);
       }
     } catch (e) {
-      print('Error creating bill: $e');
+      debugPrint('Error creating bill: $e');
+      rethrow;
     }
     return null;
   }
@@ -57,7 +57,7 @@ class BillApiService {
         return data.map((json) => Bill.fromMap(json)).toList();
       }
     } catch (e) {
-      print('Error fetching all bills: $e');
+      debugPrint('Error fetching all bills: $e');
     }
     return null;
   }
@@ -72,7 +72,7 @@ class BillApiService {
       );
       return response.statusCode == 200 || response.statusCode == 201;
     } catch (e) {
-      print('Error syncing payment to backend: $e');
+      debugPrint('Error syncing payment to backend: $e');
       return false;
     }
   }

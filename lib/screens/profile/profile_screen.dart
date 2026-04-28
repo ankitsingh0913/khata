@@ -416,7 +416,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   // ─────────────────────── EDIT PROFILE BOTTOM SHEET ────────────────────────
 
-  void _showEditProfileSheet(BuildContext context, ProfileProvider profile) {
+  Future<void> _showEditProfileSheet(BuildContext context, ProfileProvider profile) async{
     final auth = context.read<AuthProvider>();
 
     final shopCtrl =
@@ -430,7 +430,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     final gstCtrl = TextEditingController(text: profile.gstNumber ?? '');
     final upiCtrl = TextEditingController(text: profile.upiId ?? '');
 
-    showModalBottomSheet(
+    await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -467,11 +467,18 @@ class _ProfileScreenState extends State<ProfileScreen>
         },
       ),
     );
+    shopCtrl.dispose();
+    ownerCtrl.dispose();
+    phoneCtrl.dispose();
+    emailCtrl.dispose();
+    addressCtrl.dispose();
+    gstCtrl.dispose();
+    upiCtrl.dispose();
   }
 
   // ──────────────────── CHANGE PASSWORD BOTTOM SHEET ────────────────────────
 
-  void _showChangePasswordSheet(BuildContext context) {
+  Future<void> _showChangePasswordSheet(BuildContext context) async{
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -912,8 +919,9 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
     final success = await widget.onSave();
     if (mounted) {
       setState(() => _saving = false);
+      final messenger = ScaffoldMessenger.of(context);
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(
           content: Text(success
               ? '✅ Profile updated!'

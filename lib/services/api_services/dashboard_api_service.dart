@@ -22,10 +22,25 @@ class DashboardApiService {
 
   static Future<Map<String, dynamic>> getStats() async {
     final response = await ApiClient.dio.get("/dashboard/stats");
+    final responseData = response.data;
 
-    if (response.data == null || response.data["data"] == null) {
+    if (responseData is! Map<String, dynamic>) {
+      throw Exception(
+        "Stats API returned unexpected response shape: ${responseData.runtimeType}",
+      );
+    }
+
+    final statsData = responseData["data"];
+    if (statsData == null) {
       throw Exception("Stats API returned invalid response");
     }
-    return Map<String, dynamic>.from(response.data["data"]);
+
+    if (statsData is! Map) {
+      throw Exception(
+        "Stats API returned unexpected data shape: ${statsData.runtimeType}",
+      );
+    }
+
+    return Map<String, dynamic>.from(statsData);
   }
 }

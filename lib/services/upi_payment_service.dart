@@ -64,6 +64,13 @@ class UpiPaymentService {
     required String billNumber,
     required double amount,
   }) {
+    if (merchantVpa.trim().isEmpty) {
+      throw ArgumentError('merchantVpa cannot be empty');
+    }
+    if (amount <= 0 || amount.isNaN || amount.isInfinite) {
+      throw ArgumentError('amount must be a positive finite number');
+    }
+
     final transactionRef = _generateTransactionRef(billId);
 
     // Standard UPI QR code format

@@ -135,9 +135,6 @@ class _SignupScreenState extends State<SignupScreen> {
                     if (value.length < 6) {
                       return 'Password must be at least 6 characters';
                     }
-                    if (!value.contains('@')) {
-                      return 'Password must contain @';
-                    }
                     return null;
                   },
                 ),

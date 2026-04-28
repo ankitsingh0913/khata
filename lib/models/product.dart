@@ -66,7 +66,7 @@ class Product {
       stock: json["stock"] ?? 0,
       lowStockAlert: json["lowStockAlert"] ?? 10,
       unit: json["unit"] ?? "pcs",
-      isActive: json["isActive"] ?? true,
+      isActive: (json["isActive"] ?? 1) == 1,
       createdAt: json["createdAt"] != null
           ? DateTime.parse(json["createdAt"])
           : DateTime.now(),

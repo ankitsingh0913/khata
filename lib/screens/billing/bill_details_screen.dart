@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import '../../models/bill.dart';
-import '../../models/payment.dart';
-import '../../providers/bill_provider.dart';
-import '../../providers/dashboard_provider.dart';
-import '../../config/app_theme.dart';
-import '../../config/app_constants.dart';
-import '../../widgets/custom_button.dart';
-import '../../services/pdf_service.dart';
-import '../../services/share_service.dart';
-import '../loans/payment_screen.dart';
-import '../dashboard/dashboard_screen.dart';
+import 'package:khata/models/bill.dart';
+import 'package:khata/models/payment.dart';
+import 'package:khata/providers/bill_provider.dart';
+import 'package:khata/providers/dashboard_provider.dart';
+import 'package:khata/config/app_theme.dart';
+import 'package:khata/config/app_constants.dart';
+import 'package:khata/widgets/custom_button.dart';
+import 'package:khata/services/pdf_service.dart';
+import 'package:khata/services/share_service.dart';
+import 'package:khata/screens/loans/payment_screen.dart';
+import 'package:khata/screens/dashboard/dashboard_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 
@@ -74,17 +74,24 @@ class _BillDetailScreenState extends State<BillDetailScreen> {
   }
 
   Future<void> _launchReceiptUrl(String url) async {
-  final uri = Uri.parse(url);
-  if (await canLaunchUrl(uri)) {
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
-  } else {
-    if (mounted) {
+    final uri = Uri.tryParse(url);
+    final isAllowed = uri != null && (uri.scheme == 'https' || uri.scheme == 'http');
+    if (!isAllowed) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Invalid receipt link')),
+        );
+      }
+      return;
+    }
+
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!launched && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Could not open the receipt link')),
       );
     }
   }
-}
 
 
   Future<void> _shareBill() async {

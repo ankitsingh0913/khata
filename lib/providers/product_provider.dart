@@ -4,6 +4,8 @@ import 'package:khata/models/product.dart';
 import 'package:khata/services/api_services/product_api_service.dart';
 
 class ProductProvider with ChangeNotifier {
+  List<Product> _allProducts = [];
+  int _searchSeq = 0;
   List<Product> _products = [];
   List<Product> _lowStockProducts = [];
   Product? _selectedProduct;
@@ -21,7 +23,8 @@ class ProductProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      _products = await ProductApiService.getProducts();
+      _allProducts = await ProductApiService.getProducts();
+       _products = List<Product>.from(_allProducts);
       print("PRODUCT COUNT: ${_products.length}");
       _lowStockProducts = _products.where((p) => p.isLowStock).toList();
     } catch (e) {
@@ -33,23 +36,18 @@ class ProductProvider with ChangeNotifier {
   }
 
   Future<void> searchProducts(String query) async {
-    if (query.isEmpty) {
-      await loadProducts();
-      return;
-    }
-    _isLoading = true;
-    notifyListeners();
-    try {
-      final allProducts = await ProductApiService.getProducts();
-      _products = allProducts
-          .where((p) =>
-              p.name.toLowerCase().contains(query.toLowerCase()) ||
-              (p.barcode ?? "").contains(query))
-          .toList();
-    } catch (e) {
-      _error = e.toString();
-    }
-    _isLoading = false;
+    final seq = ++_searchSeq;
+    final q = query.trim().toLowerCase();
+    if (_allProducts.isEmpty) await loadProducts();
+    if (seq != _searchSeq) return; // drop stale async result
+    _products = q.isEmpty
+      ? List<Product>.from(_allProducts)
+      : _allProducts
+        .where((p) =>
+          p.name.toLowerCase().contains(q) ||
+          (p.barcode ?? '').toLowerCase().contains(q))
+        .toList();
+    _lowStockProducts = _products.where((p) => p.isLowStock).toList();
     notifyListeners();
   }
 
@@ -80,6 +78,7 @@ class ProductProvider with ChangeNotifier {
       final product = await ProductApiService.createProduct(payload);
 
       _products.insert(0, product);
+      _lowStockProducts = _products.where((p) => p.isLowStock).toList();
       notifyListeners();
       return product;
     } catch (e) {
@@ -110,6 +109,7 @@ class ProductProvider with ChangeNotifier {
       if (index != -1) {
         _products[index] = updatedProduct;
       }
+      _lowStockProducts = _products.where((p) => p.isLowStock).toList();
       if (_selectedProduct?.id == product.id) {
         _selectedProduct = updatedProduct;
       }
@@ -127,6 +127,10 @@ class ProductProvider with ChangeNotifier {
     try {
       await ProductApiService.deleteProduct(id);
       _products.removeWhere((p) => p.id == id);
+      _lowStockProducts = _products.where((p) => p.isLowStock).toList();
+      if (_selectedProduct?.id == id) {
+        _selectedProduct = null;
+      }
       notifyListeners();
       return true;
     } catch (e) {
