@@ -1,4 +1,7 @@
 import 'package:flutter/foundation.dart';
+import 'package:khata/core/storage/token_storage.dart';
+import 'package:khata/services/api_services/auth_api_service.dart';
+import 'package:khata/services/api_services/profile_api_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthProvider with ChangeNotifier {
@@ -8,29 +11,32 @@ class AuthProvider with ChangeNotifier {
   String? _phone;
   bool _isInitialized = false;
 
-
   bool get isLoggedIn => _isLoggedIn;
   String? get shopName => _shopName;
   String? get ownerName => _ownerName;
   String? get phone => _phone;
   bool get isInitialized => _isInitialized;
 
-
   Future<void> checkLoginStatus() async {
     try {
+      final accessToken = await TokenStorage.getAccessToken();
+      final refreshToken = await TokenStorage.getRefreshToken();
+
       final prefs = await SharedPreferences.getInstance();
-      _isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
-      _shopName = prefs.getString('shopName');
-      _ownerName = prefs.getString('ownerName');
-      _phone = prefs.getString('phone');
+
+      if (accessToken != null && refreshToken != null) {
+        _isLoggedIn = true;
+        _shopName = prefs.getString('shopName');
+        _ownerName = prefs.getString('ownerName') ?? prefs.getString('fullName');
+        _phone = prefs.getString('phone');
+      } else {
+        _isLoggedIn = false;
+      }
+
       _isInitialized = true;
 
-      debugPrint('AuthProvider: checkLoginStatus completed, isLoggedIn=$_isLoggedIn');
-
-      // Direct notify - this is called from async context, safe to use
       notifyListeners();
     } catch (e) {
-      debugPrint('AuthProvider error: $e');
       _isLoggedIn = false;
       _isInitialized = true;
       notifyListeners();
@@ -38,12 +44,87 @@ class AuthProvider with ChangeNotifier {
   }
 
   Future<bool> login({
-    required String phone,
-    required String shopName,
-    required String ownerName,
+    required String email,
+    required String password,
   }) async {
     try {
+      final result = await AuthApiService.login(
+        email: email,
+        password: password,
+      );
+
+      if (result == null) return false;
+
+      final accessToken = result["accessToken"] as String?;
+      final refreshToken = result["refreshToken"] as String?;
+      if (accessToken == null || refreshToken == null) {
+        debugPrint('Login response missing tokens');
+        return false;
+      }
+      await TokenStorage.saveAccessToken(accessToken);
+      await TokenStorage.saveRefreshToken(refreshToken);
+      debugPrint('Login successful, tokens saved');
+
       final prefs = await SharedPreferences.getInstance();
+
+      await prefs.setBool('isLoggedIn', true);
+
+      _isLoggedIn = true;
+
+      // Fetch user details from /users/me and persist to SharedPrefs
+      final profile = await ProfileApiService.getProfile();
+      if (profile != null) {
+        final shop = profile['shopName'] as String?;
+        final owner = profile['fullName'] as String?;
+        final ph = profile['phone'] as String?;
+        final em = profile['email'] as String?;
+
+        if (shop != null) {
+          await prefs.setString('shopName', shop);
+          _shopName = shop;
+        }
+        if (owner != null) {
+          await prefs.setString('ownerName', owner);
+          _ownerName = owner;
+        }
+        if (ph != null) {
+          await prefs.setString('phone', ph);
+          _phone = ph;
+        }
+        if (em != null) await prefs.setString('email', em);
+
+        debugPrint('Persisted profile: shop=$shop, owner=$owner');
+      }
+
+      notifyListeners();
+
+      return true;
+    } catch (e) {
+      debugPrint('Login error: $e');
+      return false;
+    }
+  }
+
+  Future<bool> signup({
+    required String shopName,
+    required String ownerName,
+    required String phone,
+    required String email,
+    required String password,
+  }) async {
+    try {
+      final result = await AuthApiService.signup(
+        shopName: shopName,
+        ownerName: ownerName,
+        phone: phone,
+        email: email,
+        password: password,
+      );
+
+      if (result == null) return false;
+
+      final prefs = await SharedPreferences.getInstance();
+
       await prefs.setBool('isLoggedIn', true);
       await prefs.setString('shopName', shopName);
       await prefs.setString('ownerName', ownerName);
@@ -53,10 +134,12 @@ class AuthProvider with ChangeNotifier {
       _shopName = shopName;
       _ownerName = ownerName;
       _phone = phone;
+
       notifyListeners();
+
       return true;
     } catch (e) {
-      debugPrint('AuthProvider error: $e');
+      debugPrint("Signup error: $e");
       return false;
     }
   }
@@ -65,6 +148,7 @@ class AuthProvider with ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.clear();
+      await TokenStorage.clear();
 
       _isLoggedIn = false;
       _shopName = null;
@@ -76,7 +160,6 @@ class AuthProvider with ChangeNotifier {
       debugPrint('AuthProvider logout error: $e');
     }
   }
-
 
   Future<void> updateShopInfo({String? shopName, String? ownerName}) async {
     try {

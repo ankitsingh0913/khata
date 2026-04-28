@@ -27,7 +27,18 @@ class DatabaseService {
       path,
       version: AppConstants.dbVersion,
       onCreate: _createDB,
+      onUpgrade: _upgradeDB,
     );
+  }
+
+  Future _upgradeDB(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      final columns = await db.rawQuery('PRAGMA table_info(bills)');
+      final hasReceiptUrl = columns.any((column) => column['name'] == 'receiptUrl');
+      if (!hasReceiptUrl) {
+        await db.execute('ALTER TABLE bills ADD COLUMN receiptUrl TEXT;');
+      }
+    }
   }
 
   Future _createDB(Database db, int version) async {
@@ -81,6 +92,7 @@ class DatabaseService {
         paymentType TEXT NOT NULL,
         status TEXT NOT NULL,
         notes TEXT,
+        receiptUrl TEXT,
         createdAt TEXT NOT NULL,
         updatedAt TEXT NOT NULL,
         FOREIGN KEY (customerId) REFERENCES customers (id)
@@ -561,21 +573,21 @@ class DatabaseService {
 
     // Today's sales
     final todaySales = await db.rawQuery('''
-      SELECT COALESCE(SUM(total), 0) as total, COUNT(*) as count 
-      FROM bills 
+      SELECT COALESCE(SUM(total), 0) as total, COUNT(*) as count
+      FROM bills
       WHERE createdAt >= ?
     ''', [startOfDay.toIso8601String()]);
 
     // Monthly sales
     final monthlySales = await db.rawQuery('''
-      SELECT COALESCE(SUM(total), 0) as total, COUNT(*) as count 
-      FROM bills 
+      SELECT COALESCE(SUM(total), 0) as total, COUNT(*) as count
+      FROM bills
       WHERE createdAt >= ?
     ''', [startOfMonth.toIso8601String()]);
 
     // Total pending
     final pendingResult = await db.rawQuery('''
-      SELECT COALESCE(SUM(pendingAmount), 0) as total 
+      SELECT COALESCE(SUM(pendingAmount), 0) as total
       FROM customers
     ''');
 
@@ -632,8 +644,8 @@ class DatabaseService {
       final endOfDay = startOfDay.add(const Duration(days: 1));
 
       final result = await db.rawQuery('''
-        SELECT COALESCE(SUM(total), 0) as total 
-        FROM bills 
+        SELECT COALESCE(SUM(total), 0) as total
+        FROM bills
         WHERE createdAt >= ? AND createdAt < ?
       ''', [startOfDay.toIso8601String(), endOfDay.toIso8601String()]);
 

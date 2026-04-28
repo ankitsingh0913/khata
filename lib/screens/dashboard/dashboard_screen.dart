@@ -1,20 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:khata/providers/auth_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import '../../providers/auth_provider.dart';
-import '../../providers/bill_provider.dart';
-import '../../providers/dashboard_provider.dart';
-import '../../providers/customer_provider.dart';
-import '../../config/app_theme.dart';
-import '../../config/app_constants.dart';
-import '../../providers/product_provider.dart';
-import '../../widgets/set_card.dart';
-import '../../widgets/bill_card.dart';
-import '../customers/customer_list_screen.dart';
-import '../products/product_list_screen.dart';
-import '../billing/create_bill_screen.dart';
-import '../billing/bill_history_screen.dart';
-import '../loans/loan_dashboard_screen.dart';
+import 'package:khata/providers/bill_provider.dart';
+import 'package:khata/providers/dashboard_provider.dart';
+import 'package:khata/providers/customer_provider.dart';
+import 'package:khata/config/app_theme.dart';
+import 'package:khata/config/app_constants.dart';
+import 'package:khata/providers/product_provider.dart';
+import 'package:khata/widgets/set_card.dart';
+import 'package:khata/widgets/bill_card.dart';
+import 'package:khata/screens/customers/customer_list_screen.dart';
+import 'package:khata/screens/products/product_list_screen.dart';
+import 'package:khata/screens/billing/create_bill_screen.dart';
+import 'package:khata/screens/billing/bill_history_screen.dart';
+import 'package:khata/screens/loans/loan_dashboard_screen.dart';
+import 'package:khata/screens/profile/profile_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class DashboardScreen extends StatefulWidget {
   final int initialTab;
@@ -26,6 +28,9 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   late int _currentIndex;
+  String? _shopName;
+  String? _ownerName;
+  String? _phone;
 
   @override
   void initState() {
@@ -35,12 +40,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _loadData() async {
-    await Future.wait([
-      context.read<DashboardProvider>().loadDashboard(),
-      context.read<CustomerProvider>().loadCustomers(),
-      context.read<ProductProvider>().loadProducts(),
-      context.read<BillProvider>().loadBills(limit: 10),
-    ]);
+    final prefs = await SharedPreferences.getInstance();
+    final shopName = prefs.getString('shopName');
+    // login stores owner as 'fullName'; signup stores as 'ownerName'
+    final ownerName =
+        prefs.getString('fullName') ?? prefs.getString('ownerName');
+    final phone = prefs.getString('phone');
+    if (mounted) {
+      setState(() {
+        _shopName = shopName;
+        _ownerName = ownerName;
+        _phone = phone;
+      });
+    }
+    try {
+      await Future.wait([
+        context.read<DashboardProvider>().loadDashboard(),
+        context.read<CustomerProvider>().loadCustomers(),
+        context.read<ProductProvider>().loadProducts(),
+        context.read<BillProvider>().loadBills(limit: 10),
+      ]);
+    } catch (e) {
+      debugPrint("Dashboard load error: $e");
+    }
   }
 
   @override
@@ -58,22 +80,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
       bottomNavigationBar: _buildBottomNav(),
-      floatingActionButton: _currentIndex == 0 ? FloatingActionButton.extended(
-        onPressed: () {
-          setState(() => _currentIndex = 2);
-        },
-        icon: const Icon(Icons.add),
-        label: const Text('New Bill'),
-      ) : null,
+      floatingActionButton: _currentIndex != 2
+          ? FloatingActionButton.extended(
+              onPressed: () {
+                setState(() => _currentIndex = 2);
+              },
+              icon: const Icon(Icons.add),
+              label: const Text('New Bill'),
+            )
+          : null,
     );
   }
 
   Widget _buildHomeTab() {
-    final currencyFormat = NumberFormat.currency(symbol: AppConstants.currency, decimalDigits: 0);
-    return Consumer<DashboardProvider>(
-      builder: (context, dashboard, _) {
-        final auth = context.watch<AuthProvider>();
-
+    final currencyFormat =
+        NumberFormat.currency(symbol: AppConstants.currency, decimalDigits: 0);
+    return Consumer2<DashboardProvider,CustomerProvider>(
+      builder: (context, dashboard, customerProvider, _) {
+        final totalPending = customerProvider.totalPendingAmount;
         return RefreshIndicator(
           onRefresh: _loadData,
           child: CustomScrollView(
@@ -87,7 +111,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      auth.shopName ?? 'My Shop',
+                      _shopName ?? 'My Shop',
                       style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -95,7 +119,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ),
                     Text(
-                      'Welcome back, ${auth.ownerName ?? 'User'}!',
+                      'Welcome back, ${_ownerName ?? 'User'}!',
                       style: const TextStyle(
                         fontSize: 14,
                         color: AppTheme.textSecondary,
@@ -138,13 +162,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                     StatCard(
                       title: 'Total Pending',
-                      value: currencyFormat.format(dashboard.totalPending),
+                      value: currencyFormat.format(totalPending),
                       icon: Icons.account_balance_wallet_outlined,
                       color: AppTheme.errorColor,
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const LoanDashboardScreen()),
+                          MaterialPageRoute(
+                              builder: (_) => const LoanDashboardScreen()),
                         );
                       },
                     ),
@@ -202,7 +227,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             onTap: () {
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (_) => const BillHistoryScreen()),
+                                MaterialPageRoute(
+                                    builder: (_) => const BillHistoryScreen()),
                               );
                             },
                           ),
@@ -214,7 +240,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             onTap: () {
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (_) => const LoanDashboardScreen()),
+                                MaterialPageRoute(
+                                    builder: (_) =>
+                                        const LoanDashboardScreen()),
                               );
                             },
                           ),
@@ -244,7 +272,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         onPressed: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => const BillHistoryScreen()),
+                            MaterialPageRoute(
+                                builder: (_) => const BillHistoryScreen()),
                           );
                         },
                         child: const Text('See All'),
@@ -254,68 +283,63 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
 
-              Consumer<BillProvider>(
-                builder: (context, billProvider, _) {
-                  if (billProvider.isLoading) {
-                    return const SliverFillRemaining(
-                      child: Center(child: CircularProgressIndicator()),
-                    );
-                  }
-
-                  if (billProvider.bills.isEmpty) {
-                    return SliverFillRemaining(
-                      child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.receipt_long_outlined,
-                              size: 80,
-                              color: AppTheme.textSecondary.withOpacity(0.5),
-                            ),
-                            const SizedBox(height: 16),
-                            const Text(
-                              'No bills yet',
-                              style: TextStyle(
-                                fontSize: 18,
-                                color: AppTheme.textSecondary,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'Create your first bill',
-                              style: TextStyle(
-                                color: AppTheme.textSecondary,
-                              ),
-                            ),
-                          ],
+              if (dashboard.isLoading)
+                const SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else if (dashboard.recentBills.isEmpty)
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.receipt_long_outlined,
+                          size: 80,
+                          color: AppTheme.textSecondary.withOpacity(0.5),
                         ),
-                      ),
-                    );
-                  }
-
-                  return SliverPadding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    sliver: SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                            (context, index) {
-                          final bill = billProvider.bills[index];
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: BillCard(
-                              bill: bill,
-                              onTap: () {
-                                // Navigate to bill detail
-                              },
-                            ),
-                          );
-                        },
-                        childCount: billProvider.bills.take(10).length,
-                      ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'No bills yet',
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: AppTheme.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Create your first bill',
+                          style: TextStyle(
+                            color: AppTheme.textSecondary,
+                          ),
+                        ),
+                      ],
                     ),
-                  );
-                },
-              ),
+                  ),
+                )
+              else
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final bill = dashboard.recentBills[index];
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: BillCard(
+                            bill: bill,
+                            onTap: () {
+                              // Navigate to bill detail
+                            },
+                          ),
+                        );
+                      },
+                      childCount: dashboard.recentBills.take(10).length,
+                    ),
+                  ),
+                ),
 
               const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
             ],
@@ -379,17 +403,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             child: Row(
               children: [
-                Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: const Icon(
-                    Icons.store,
-                    color: AppTheme.primaryColor,
-                    size: 30,
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                    );
+                  },
+                  child: Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Icon(
+                      Icons.store,
+                      color: AppTheme.primaryColor,
+                      size: 30,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -398,20 +430,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        auth.shopName ?? 'My Shop',
+                        _shopName ?? 'My Shop',
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       Text(
-                        auth.ownerName ?? 'Owner',
+                        _ownerName ?? 'Owner',
                         style: const TextStyle(
                           color: AppTheme.textSecondary,
                         ),
                       ),
                       Text(
-                        auth.phone ?? '',
+                        _phone ?? '',
                         style: const TextStyle(
                           color: AppTheme.textSecondary,
                         ),

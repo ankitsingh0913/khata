@@ -18,6 +18,7 @@ class Bill {
   final String? notes;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final String? receiptUrl;
 
   Bill({
     required this.id,
@@ -36,6 +37,7 @@ class Bill {
     this.notes,
     DateTime? createdAt,
     DateTime? updatedAt,
+    this.receiptUrl,
   })  : createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now();
 
@@ -60,7 +62,36 @@ class Bill {
       'notes': notes,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
+      'receiptUrl': receiptUrl,
     };
+  }
+
+  factory Bill.fromJson(Map<String, dynamic> json) {
+    return Bill(
+      id: json["id"] ?? '',
+      billNumber: json["billNumber"] ?? '',
+      customerId: json["customerId"],
+      customerName: json["customerName"],
+      customerPhone: json["customerPhone"],
+      items: json["items"] != null
+          ? List<BillItem>.from(
+              (json["items"] as List).map((x) => BillItem.fromJson(x)))
+          : [],
+      subtotal: (json["subtotal"] ?? 0).toDouble(),
+      discount: (json["discount"] ?? 0).toDouble(),
+      tax: (json["tax"] ?? 0).toDouble(),
+      total: (json["total"] ?? 0).toDouble(),
+      paidAmount: (json["paidAmount"] ?? 0).toDouble(),
+      paymentType: json["paymentType"]?.toString().toUpperCase() ??
+          AppConstants.paymentCash,
+      status: json["status"]?.toString().toUpperCase() ?? AppConstants.billUnpaid,
+      notes: json["notes"],
+        createdAt: DateTime.tryParse(json["createdAt"]?.toString() ?? '') ??
+          DateTime.now(),
+        updatedAt: DateTime.tryParse(json["updatedAt"]?.toString() ?? '') ??
+          DateTime.now(),
+      receiptUrl: json["receiptUrl"],
+    );
   }
 
   factory Bill.fromMap(Map<String, dynamic> map, {List<BillItem>? items}) {
@@ -76,11 +107,14 @@ class Bill {
       tax: (map['tax'] ?? 0).toDouble(),
       total: (map['total'] ?? 0).toDouble(),
       paidAmount: (map['paidAmount'] ?? 0).toDouble(),
-      paymentType: map['paymentType'] ?? AppConstants.paymentCash,
-      status: map['status'] ?? AppConstants.billUnpaid,
+      paymentType: map['paymentType']?.toString().toUpperCase() ??
+          AppConstants.paymentCash,
+      status:
+          map['status']?.toString().toUpperCase() ?? AppConstants.billUnpaid,
       notes: map['notes'],
       createdAt: DateTime.parse(map['createdAt']),
       updatedAt: DateTime.parse(map['updatedAt']),
+      receiptUrl: map['receiptUrl'],
     );
   }
 
@@ -99,6 +133,7 @@ class Bill {
     String? paymentType,
     String? status,
     String? notes,
+    String? receiptUrl
   }) {
     return Bill(
       id: id ?? this.id,
@@ -115,6 +150,7 @@ class Bill {
       paymentType: paymentType ?? this.paymentType,
       status: status ?? this.status,
       notes: notes ?? this.notes,
+      receiptUrl: receiptUrl ?? this.receiptUrl,
       createdAt: createdAt,
       updatedAt: DateTime.now(),
     );

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:khata/core/api/api_client.dart';
 import 'package:khata/providers/auth_provider.dart';
 import 'package:khata/providers/bill_provider.dart';
 import 'package:khata/providers/customer_provider.dart';
 import 'package:khata/providers/dashboard_provider.dart';
 import 'package:khata/providers/product_provider.dart';
+import 'package:khata/providers/profile_provider.dart';
 import 'package:khata/services/database_service.dart';
 import 'package:provider/provider.dart';
 
@@ -13,6 +15,8 @@ import 'Screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await ApiClient.init();
+
 
   // Initialize database
   await DatabaseService.instance.database;
@@ -38,9 +42,10 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ProductProvider()),
         ChangeNotifierProvider(create: (_) => BillProvider()),
         ChangeNotifierProvider(create: (_) => DashboardProvider()),
+        ChangeNotifierProvider(create: (_) => ProfileProvider()),
       ],
       child: MaterialApp(
-        title: 'Smart Shopkeeper',
+        title: 'Khata',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
         home: const SplashScreen(),

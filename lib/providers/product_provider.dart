@@ -1,10 +1,11 @@
 import 'package:flutter/foundation.dart';
-import 'package:uuid/uuid.dart';
-import '../models/product.dart';
-import '../services/database_service.dart';
+import 'package:khata/models/product.dart';
+import 'package:khata/models/product.dart';
+import 'package:khata/services/api_services/product_api_service.dart';
 
 class ProductProvider with ChangeNotifier {
-  final DatabaseService _db = DatabaseService.instance;
+  List<Product> _allProducts = [];
+  int _searchSeq = 0;
   List<Product> _products = [];
   List<Product> _lowStockProducts = [];
   Product? _selectedProduct;
@@ -19,11 +20,13 @@ class ProductProvider with ChangeNotifier {
 
   Future<void> loadProducts() async {
     _isLoading = true;
-    _error = null;
+    notifyListeners();
 
     try {
-      _products = await _db.getAllProducts();
-      _lowStockProducts = await _db.getLowStockProducts();
+      _allProducts = await ProductApiService.getProducts();
+       _products = List<Product>.from(_allProducts);
+      print("PRODUCT COUNT: ${_products.length}");
+      _lowStockProducts = _products.where((p) => p.isLowStock).toList();
     } catch (e) {
       _error = e.toString();
     }
@@ -33,20 +36,18 @@ class ProductProvider with ChangeNotifier {
   }
 
   Future<void> searchProducts(String query) async {
-    if (query.isEmpty) {
-      await loadProducts();
-      return;
-    }
-
-    _isLoading = true;
-
-    try {
-      _products = await _db.searchProducts(query);
-    } catch (e) {
-      _error = e.toString();
-    }
-
-    _isLoading = false;
+    final seq = ++_searchSeq;
+    final q = query.trim().toLowerCase();
+    if (_allProducts.isEmpty) await loadProducts();
+    if (seq != _searchSeq) return; // drop stale async result
+    _products = q.isEmpty
+      ? List<Product>.from(_allProducts)
+      : _allProducts
+        .where((p) =>
+          p.name.toLowerCase().contains(q) ||
+          (p.barcode ?? '').toLowerCase().contains(q))
+        .toList();
+    _lowStockProducts = _products.where((p) => p.isLowStock).toList();
     notifyListeners();
   }
 
@@ -62,21 +63,22 @@ class ProductProvider with ChangeNotifier {
     String unit = 'pcs',
   }) async {
     try {
-      final product = Product(
-        id: const Uuid().v4(),
-        name: name,
-        description: description,
-        category: category,
-        barcode: barcode,
-        purchasePrice: purchasePrice,
-        sellingPrice: sellingPrice,
-        stock: stock,
-        lowStockAlert: lowStockAlert,
-        unit: unit,
-      );
+      final payload = {
+        "name": name,
+        "description": description,
+        "category": category,
+        "barcode": barcode,
+        "purchasePrice": purchasePrice,
+        "sellingPrice": sellingPrice,
+        "stock": stock,
+        "lowStockAlert": lowStockAlert,
+        "unit": unit,
+      };
 
-      await _db.insertProduct(product);
+      final product = await ProductApiService.createProduct(payload);
+
       _products.insert(0, product);
+      _lowStockProducts = _products.where((p) => p.isLowStock).toList();
       notifyListeners();
       return product;
     } catch (e) {
@@ -88,15 +90,31 @@ class ProductProvider with ChangeNotifier {
 
   Future<bool> updateProduct(Product product) async {
     try {
-      await _db.updateProduct(product);
+      final payload = {
+        "name": product.name,
+        "description": product.description,
+        "category": product.category,
+        "barcode": product.barcode,
+        "purchasePrice": product.purchasePrice,
+        "sellingPrice": product.sellingPrice,
+        "stock": product.stock,
+        "lowStockAlert": product.lowStockAlert,
+        "unit": product.unit,
+      };
+
+      final updatedProduct =
+          await ProductApiService.updateProduct(product.id, payload);
+
       final index = _products.indexWhere((p) => p.id == product.id);
       if (index != -1) {
-        _products[index] = product;
+        _products[index] = updatedProduct;
       }
+      _lowStockProducts = _products.where((p) => p.isLowStock).toList();
       if (_selectedProduct?.id == product.id) {
-        _selectedProduct = product;
+        _selectedProduct = updatedProduct;
       }
       notifyListeners();
+
       return true;
     } catch (e) {
       _error = e.toString();
@@ -107,8 +125,9 @@ class ProductProvider with ChangeNotifier {
 
   Future<bool> deleteProduct(String id) async {
     try {
-      await _db.deleteProduct(id);
+      await ProductApiService.deleteProduct(id);
       _products.removeWhere((p) => p.id == id);
+      _lowStockProducts = _products.where((p) => p.isLowStock).toList();
       if (_selectedProduct?.id == id) {
         _selectedProduct = null;
       }
@@ -121,9 +140,10 @@ class ProductProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> updateStock(String productId, int quantity, {bool isDeduct = true}) async {
+  Future<bool> updateStock(String productId, int quantity,
+      {bool isDeduct = true}) async {
     try {
-      await _db.updateStock(productId, quantity, isDeduct);
+      await ProductApiService.updateStock(productId, quantity, isDeduct);
       await loadProducts();
       return true;
     } catch (e) {

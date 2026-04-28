@@ -1,0 +1,81 @@
+import 'dart:convert';
+import 'package:khata/core/api/api_client.dart';
+
+class ProfileApiService {
+  static const String _baseUrl = "http://10.0.2.2:8082/api/v1";
+
+  static Future<Map<String, dynamic>?> getProfile() async {
+    try {
+      final response = await ApiClient.dio.get('$_baseUrl/users/me');
+      if (response.statusCode == 200) {
+        print("PROFILE DATA: ${response.data}");
+        final responseData = response.data;
+        if (responseData is Map<String, dynamic>) {
+          if (responseData.containsKey('data')) {
+            final nestedData = responseData['data'];
+            if (nestedData is Map<String, dynamic>) {
+              return nestedData;
+            }
+            if (nestedData is Map) {
+              return Map<String, dynamic>.from(nestedData);
+            }
+            return null;
+          }
+          return responseData;
+        }
+        if (responseData is Map) {
+          return Map<String, dynamic>.from(responseData);
+        }
+      }
+    } catch (e) {
+      // Return null on error — caller will handle gracefully
+    } finally {}
+    return null;
+  }
+
+  static Future<bool> updateProfile({
+    required String shopName,
+    required String fullName,
+    required String phone,
+    String? email,
+    String? address,
+    String? gstNumber,
+    String? upiId,
+  }) async {
+    try {
+      final response = await ApiClient.dio.patch(
+        '$_baseUrl/users/update',
+        data: jsonEncode({
+          if (shopName.isNotEmpty) 'shopName': shopName,
+          if (fullName.isNotEmpty) 'fullName': fullName,
+          if (phone.isNotEmpty) 'phone': phone,
+          if (email != null) 'email': email,
+          if (address != null) 'address': address,
+          if (gstNumber != null) 'gstNumber': gstNumber,
+          if (upiId != null) 'upiId': upiId,
+        }),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  static Future<bool> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    try {
+      final response = await ApiClient.dio.put(
+        '$_baseUrl/auth/change-password',
+        data: jsonEncode({
+          'currentPassword': currentPassword,
+          'newPassword': newPassword,
+        }),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+}

@@ -1,15 +1,17 @@
 import 'package:flutter/foundation.dart';
+import 'package:khata/services/api_services/bill_api_service.dart';
 import 'package:uuid/uuid.dart';
-import '../models/bill.dart';
-import '../models/bill_item.dart';
-import '../models/product.dart';
-import '../models/customer.dart';
-import '../models/payment.dart';
-import '../config/app_constants.dart';
-import '../services/database_service.dart';
+import 'package:khata/models/bill.dart';
+import 'package:khata/models/bill_item.dart';
+import 'package:khata/models/product.dart';
+import 'package:khata/models/customer.dart';
+import 'package:khata/models/payment.dart';
+import 'package:khata/config/app_constants.dart';
+import 'package:khata/services/database_service.dart';
 
 class BillProvider with ChangeNotifier {
   final DatabaseService _db = DatabaseService.instance;
+  static const Duration _billSyncBaseDelay = Duration(seconds: 2);
 
   List<Bill> _bills = [];
   List<Bill> _unpaidBills = [];
@@ -20,6 +22,8 @@ class BillProvider with ChangeNotifier {
   double _discount = 0.0;
   bool _isLoading = false;
   String? _error;
+  final Map<String, int> _billSyncRetryCounts = {};
+  final Set<String> _scheduledBillSyncs = <String>{};
 
   List<Bill> get bills => _bills;
   List<Bill> get unpaidBills => _unpaidBills;
@@ -35,13 +39,114 @@ class BillProvider with ChangeNotifier {
   double get total => subtotal - _discount;
   int get totalItems => _cartItems.fold(0, (sum, item) => sum + item.quantity);
 
+  Duration _billSyncRetryDelay(int attempt) {
+    final multiplier = 1 << (attempt - 1);
+    final seconds = _billSyncBaseDelay.inSeconds * multiplier;
+    const maxSeconds = 300;
+    return Duration(seconds: seconds > maxSeconds ? maxSeconds : seconds);
+  }
+
+  void _scheduleBillSync(Bill bill, {Duration delay = Duration.zero}) {
+    if (delay > Duration.zero && !_scheduledBillSyncs.add(bill.id)) {
+      return;
+    }
+
+    Future<void>.delayed(delay, () async {
+      _scheduledBillSyncs.remove(bill.id);
+      await _syncBillToBackend(bill);
+    });
+  }
+
+  Future<void> _syncBillToBackend(Bill bill) async {
+    try {
+      final remoteBill = await BillApiService.createBill(bill);
+      if (remoteBill == null) {
+        throw StateError(
+          'Bill sync returned no bill payload for ${bill.billNumber}',
+        );
+      }
+
+      _billSyncRetryCounts.remove(bill.id);
+      _scheduledBillSyncs.remove(bill.id);
+
+      await _db.updateBill(remoteBill);
+      notifyListeners();
+
+      if (kDebugMode) {
+        debugPrint(
+          "Successfully synced bill to backend: ${remoteBill.receiptUrl ?? remoteBill.id}",
+        );
+      }
+    } catch (error, stackTrace) {
+      final attempt = (_billSyncRetryCounts[bill.id] ?? 0) + 1;
+      _billSyncRetryCounts[bill.id] = attempt;
+
+      final retryDelay = _billSyncRetryDelay(attempt);
+      _error =
+          'Failed to sync bill ${bill.billNumber} to backend (attempt $attempt): $error';
+
+      FlutterError.reportError(
+        FlutterErrorDetails(
+          exception: error,
+          stack: stackTrace,
+          library: 'bill_provider',
+          context: ErrorDescription(
+            'while syncing bill ${bill.id} to the backend',
+          ),
+          informationCollector: () sync* {
+            yield StringProperty('billId', bill.id);
+            yield StringProperty('billNumber', bill.billNumber);
+            yield IntProperty('retryAttempt', attempt);
+            yield StringProperty('nextRetryIn', retryDelay.toString());
+          },
+        ),
+      );
+
+      if (kDebugMode) {
+        debugPrint(
+          'Bill sync failed for ${bill.id} (attempt $attempt): $error',
+        );
+        debugPrintStack(stackTrace: stackTrace);
+      }
+
+      notifyListeners();
+      _scheduleBillSync(bill, delay: retryDelay);
+    }
+  }
+
   Future<void> loadBills({int? limit}) async {
     _isLoading = true;
     _error = null;
 
     try {
+      // 1. Instantly load from local SQLite (Offline First)
       _bills = await _db.getAllBills(limit: limit);
       _unpaidBills = await _db.getUnpaidBills();
+      notifyListeners(); // Update UI immediately
+
+      // 2. Fetch updates from Spring Boot backend in the background
+      final remoteBills = await BillApiService.getAllBills();
+
+      if (remoteBills != null && remoteBills.isNotEmpty) {
+        // Here you would typically sync new records to SQLite.
+        // For simplicity, we just safely refresh the memory list from local DB
+        // after saving the remote bills to local DB.
+
+        for (var bill in remoteBills) {
+          final localBill = await _db.getBillById(bill.id);
+          if (localBill == null) {
+            // Bill exists on server but not locally, save it
+            await _db.insertBill(bill);
+          } else if (localBill.updatedAt.isBefore(bill.updatedAt)) {
+            // Server has a newer version of the bill (e.g. payment was made on another device)
+            await _db.updateBill(bill);
+          }
+        }
+
+        // Reload fresh data from local DB after sync
+        _bills = await _db.getAllBills(limit: limit);
+        _unpaidBills = await _db.getUnpaidBills();
+      }
     } catch (e) {
       _error = e.toString();
     }
@@ -54,7 +159,9 @@ class BillProvider with ChangeNotifier {
     _isLoading = true;
 
     try {
+      // Load offline first
       _bills = await _db.getBillsByCustomer(customerId);
+      // Background sync would follow the same pattern as above here if needed
     } catch (e) {
       _error = e.toString();
     }
@@ -64,7 +171,8 @@ class BillProvider with ChangeNotifier {
   }
 
   void addToCart(Product product, {int quantity = 1}) {
-    final existingIndex = _cartItems.indexWhere((item) => item.productId == product.id);
+    final existingIndex =
+        _cartItems.indexWhere((item) => item.productId == product.id);
 
     if (existingIndex != -1) {
       final existingItem = _cartItems[existingIndex];
@@ -98,7 +206,8 @@ class BillProvider with ChangeNotifier {
       final billNumber = await _db.generateBillNumber();
       final billId = const Uuid().v4();
 
-      final items = _cartItems.map((item) => item.copyWith(billId: billId)).toList();
+      final items =
+          _cartItems.map((item) => item.copyWith(billId: billId)).toList();
 
       // UPI bills start as unpaid until payment is confirmed
       const status = AppConstants.billUnpaid;
@@ -124,6 +233,9 @@ class BillProvider with ChangeNotifier {
       _currentBill = bill;
       _bills.insert(0, bill);
       _unpaidBills.insert(0, bill);
+
+      // Sync in the background so the UI can proceed immediately.
+      _scheduleBillSync(bill);
 
       clearCart();
 
@@ -161,12 +273,14 @@ class BillProvider with ChangeNotifier {
       final billData = billResult.first;
       final total = (billData['total'] as num?)?.toDouble() ?? 0.0;
       final customerId = billData['customerId'] as String?;
-      final currentPaidAmount = (billData['paidAmount'] as num?)?.toDouble() ?? 0.0;
+      final currentPaidAmount =
+          (billData['paidAmount'] as num?)?.toDouble() ?? 0.0;
       final paymentType = billData['paymentType'] as String?;
 
       // Use transaction for atomic updates
       await db.transaction((txn) async {
-        final newStatus = isPaid ? AppConstants.billPaid : AppConstants.billUnpaid;
+        final newStatus =
+            isPaid ? AppConstants.billPaid : AppConstants.billUnpaid;
         final newPaidAmount = isPaid ? total : 0.0;
 
         // Update bill
@@ -193,7 +307,8 @@ class BillProvider with ChangeNotifier {
 
           if (customerResult.isNotEmpty) {
             final currentPending =
-                (customerResult.first['pendingAmount'] as num?)?.toDouble() ?? 0.0;
+                (customerResult.first['pendingAmount'] as num?)?.toDouble() ??
+                    0.0;
 
             double newPending;
             if (isPaid) {
@@ -290,7 +405,8 @@ class BillProvider with ChangeNotifier {
       final billNumber = await _db.generateBillNumber();
       final billId = const Uuid().v4();
 
-      final items = _cartItems.map((item) => item.copyWith(billId: billId)).toList();
+      final items =
+          _cartItems.map((item) => item.copyWith(billId: billId)).toList();
 
       String status;
       double paidAmount;
@@ -326,6 +442,9 @@ class BillProvider with ChangeNotifier {
       if (_paymentType == AppConstants.paymentCredit) {
         _unpaidBills.insert(0, bill);
       }
+
+      // Sync in the background so the UI can proceed immediately.
+      _scheduleBillSync(bill);
 
       clearCart();
 
@@ -364,17 +483,22 @@ class BillProvider with ChangeNotifier {
         notes: notes,
       );
 
-      // Insert payment (this handles bill and customer updates in a transaction)
+      // Insert payment (this handles local bill and customer updates in a transaction)
       await _db.insertPayment(payment);
 
-      // Reload data AFTER transaction is complete
-      // Use Future.microtask to ensure transaction is fully closed
+      // Step 4: Sync payment to backend in the background
+      // This ensures PostgreSQL stays in sync with your phone's SQLite
+      BillApiService.recordPayment(payment.toMap()).then((success) {
+        if (success && kDebugMode) {
+          print(
+              "Cloud Sync Success: Payment for Bill ${payment.billId} recorded.");
+        }
+      });
+
+      // Reload local data to reflect changes in UI
       await Future.microtask(() async {
-        // Reload bills list
         _bills = await _db.getAllBills();
         _unpaidBills = await _db.getUnpaidBills();
-
-        // Update current bill if it's the same
         if (_currentBill?.id == billId) {
           _currentBill = await _db.getBillById(billId);
         }
