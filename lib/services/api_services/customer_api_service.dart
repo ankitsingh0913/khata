@@ -24,8 +24,12 @@ class CustomerApiService {
                 ? responseData['data'] as List
                 : responseData['items'] is List
                     ? responseData['items'] as List
-                    : const [])
-            : const [];
+                    : null)
+            : null;
+
+    if (data == null) {
+      throw Exception('Unexpected customers response shape');
+    }
 
     return data
         .map((e) => Customer.fromJson(Map<String, dynamic>.from(e as Map)))
