@@ -37,23 +37,35 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _handleSocialAuthResult(SocialAuthResult result) {
-    if (result.success) {
-      // Social login successful
-      // You can auto-fill fields or directly login
-      if (result.displayName != null) {
-        _ownerNameController.text = result.displayName!;
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Signed in with ${result.provider.name}'),
-          backgroundColor: AppTheme.successColor,
-        ),
+  Future<void> _handleSocialAuthResult(SocialAuthResult result) async {
+    if (result.success && result.idToken != null) {
+      setState(() => _isLoading = true);
+      final success = await context.read<AuthProvider>().loginWithGoogle(
+        result.idToken!,
       );
 
-      // Optionally auto-login if you have enough info
-      // _handleLogin();
+      if(!mounted) return;
+      setState(() => _isLoading = false);
+
+      if(success){
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Signed in with ${result.provider.name}'),
+            backgroundColor: AppTheme.successColor,
+          ),
+        );
+
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const DashboardScreen()),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Server authentication failed. Please try again.'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+      }
     } else {
       // Show error
       ScaffoldMessenger.of(context).showSnackBar(
@@ -144,7 +156,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                Center(
+                const Center(
                   child: Text(
                     'Setup your shop to get started',
                     style: TextStyle(
@@ -208,7 +220,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 16),
                 Center(
                   child: GestureDetector(
-                    child: Text(
+                    child: const Text(
                       'Create a new Account',
                       style: TextStyle(
                         fontSize: 14,
@@ -219,7 +231,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     onTap: (){
                       Navigator.of(context).pushReplacement(
                         MaterialPageRoute(builder: (_) =>
-                            SignupScreen()
+                            const SignupScreen()
                         )
                       );
                     },

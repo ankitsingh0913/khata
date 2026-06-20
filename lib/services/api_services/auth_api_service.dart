@@ -69,4 +69,29 @@ class AuthApiService {
 
     return null;
   }
+
+  // Google Login
+  static Future<Map<String, dynamic>?> googleLogin(String idToken) async{
+    final url = Uri.parse("$baseUrl/google");
+    http.Response response;
+    try {
+      response = await http.post(
+        url,
+        headers:{"Content-Type": "application/json"},
+        body:jsonEncode({"idToken":idToken}),
+      ).timeout(const Duration(seconds:15));
+    } catch(e){
+      return null;
+    }
+
+    if(response.statusCode == 201 || response.statusCode == 200){
+      try {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } catch(_){
+        return null;
+      }
+    }
+
+    return null;
+  }
 }

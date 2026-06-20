@@ -8,6 +8,8 @@ import 'package:khata/providers/dashboard_provider.dart';
 import 'package:khata/providers/product_provider.dart';
 import 'package:khata/providers/profile_provider.dart';
 import 'package:khata/services/database_service.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 import 'package:provider/provider.dart';
 
 import 'Config/app_theme.dart';
@@ -17,7 +19,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await ApiClient.init();
 
-
+  await dotenv.load(fileName: ".env");
   // Initialize database
   await DatabaseService.instance.database;
 
