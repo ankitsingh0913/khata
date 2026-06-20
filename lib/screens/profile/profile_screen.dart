@@ -419,47 +419,34 @@ class _ProfileScreenState extends State<ProfileScreen>
   Future<void> _showEditProfileSheet(BuildContext context, ProfileProvider profile) async{
     final auth = context.read<AuthProvider>();
 
-    final shopCtrl =
-        TextEditingController(text: profile.shopName ?? auth.shopName ?? '');
-    final ownerCtrl =
-        TextEditingController(text: profile.fullName ?? auth.ownerName ?? '');
-    final phoneCtrl =
-        TextEditingController(text: profile.phone ?? auth.phone ?? '');
-    final emailCtrl = TextEditingController(text: profile.email ?? '');
-    final addressCtrl = TextEditingController(text: profile.address ?? '');
-    final gstCtrl = TextEditingController(text: profile.gstNumber ?? '');
-    final upiCtrl = TextEditingController(text: profile.upiId ?? '');
-
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _EditProfileSheet(
-        shopCtrl: shopCtrl,
-        ownerCtrl: ownerCtrl,
-        phoneCtrl: phoneCtrl,
-        emailCtrl: emailCtrl,
-        addressCtrl: addressCtrl,
-        gstCtrl: gstCtrl,
-        upiCtrl: upiCtrl,
-        onSave: () async {
+        initialShopName: profile.shopName ?? auth.shopName ?? '',
+        initialFullName: profile.fullName ?? auth.ownerName ?? '',
+        initialPhone: profile.phone ?? auth.phone ?? '',
+        initialEmail: profile.email ?? '',
+        initialAddress: profile.address ?? '',
+        initialGstNumber: profile.gstNumber ?? '',
+        initialUpiId: profile.upiId ?? '',
+        onSave: (shopName, fullName, phone, email, address, gstNumber, upiId) async {
           final success = await profile.updateProfile(
-            shopName: shopCtrl.text.trim(),
-            fullName: ownerCtrl.text.trim(),
-            phone: phoneCtrl.text.trim(),
-            email: emailCtrl.text.trim().isEmpty ? null : emailCtrl.text.trim(),
-            address: addressCtrl.text.trim().isEmpty
-                ? null
-                : addressCtrl.text.trim(),
-            gstNumber: gstCtrl.text.trim().isEmpty ? null : gstCtrl.text.trim(),
-            upiId: upiCtrl.text.trim().isEmpty ? null : upiCtrl.text.trim(),
+            shopName: shopName,
+            fullName: fullName,
+            phone: phone,
+            email: email.isEmpty ? null : email,
+            address: address.isEmpty ? null : address,
+            gstNumber: gstNumber.isEmpty ? null : gstNumber,
+            upiId: upiId.isEmpty ? null : upiId,
           );
 
           // Also update AuthProvider so the dashboard header is in sync
           if (success && context.mounted) {
             context.read<AuthProvider>().updateShopInfo(
-                  shopName: shopCtrl.text.trim(),
-                  ownerName: ownerCtrl.text.trim(),
+                  shopName: shopName,
+                  ownerName: fullName,
                 );
           }
 
@@ -467,13 +454,6 @@ class _ProfileScreenState extends State<ProfileScreen>
         },
       ),
     );
-    shopCtrl.dispose();
-    ownerCtrl.dispose();
-    phoneCtrl.dispose();
-    emailCtrl.dispose();
-    addressCtrl.dispose();
-    gstCtrl.dispose();
-    upiCtrl.dispose();
   }
 
   // ──────────────────── CHANGE PASSWORD BOTTOM SHEET ────────────────────────
@@ -779,23 +759,31 @@ class _ProfileScreenState extends State<ProfileScreen>
 // ══════════════════════ EDIT PROFILE BOTTOM SHEET ═════════════════════════
 
 class _EditProfileSheet extends StatefulWidget {
-  final TextEditingController shopCtrl;
-  final TextEditingController ownerCtrl;
-  final TextEditingController phoneCtrl;
-  final TextEditingController emailCtrl;
-  final TextEditingController addressCtrl;
-  final TextEditingController gstCtrl;
-  final TextEditingController upiCtrl;
-  final Future<bool> Function() onSave;
+  final String initialShopName;
+  final String initialFullName;
+  final String initialPhone;
+  final String initialEmail;
+  final String initialAddress;
+  final String initialGstNumber;
+  final String initialUpiId;
+  final Future<bool> Function(
+    String shopName,
+    String fullName,
+    String phone,
+    String email,
+    String address,
+    String gstNumber,
+    String upiId,
+  ) onSave;
 
   const _EditProfileSheet({
-    required this.shopCtrl,
-    required this.ownerCtrl,
-    required this.phoneCtrl,
-    required this.emailCtrl,
-    required this.addressCtrl,
-    required this.gstCtrl,
-    required this.upiCtrl,
+    required this.initialShopName,
+    required this.initialFullName,
+    required this.initialPhone,
+    required this.initialEmail,
+    required this.initialAddress,
+    required this.initialGstNumber,
+    required this.initialUpiId,
     required this.onSave,
   });
 
@@ -805,7 +793,38 @@ class _EditProfileSheet extends StatefulWidget {
 
 class _EditProfileSheetState extends State<_EditProfileSheet> {
   final _formKey = GlobalKey<FormState>();
+  late final TextEditingController shopCtrl;
+  late final TextEditingController ownerCtrl;
+  late final TextEditingController phoneCtrl;
+  late final TextEditingController emailCtrl;
+  late final TextEditingController addressCtrl;
+  late final TextEditingController gstCtrl;
+  late final TextEditingController upiCtrl;
   bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    shopCtrl = TextEditingController(text: widget.initialShopName);
+    ownerCtrl = TextEditingController(text: widget.initialFullName);
+    phoneCtrl = TextEditingController(text: widget.initialPhone);
+    emailCtrl = TextEditingController(text: widget.initialEmail);
+    addressCtrl = TextEditingController(text: widget.initialAddress);
+    gstCtrl = TextEditingController(text: widget.initialGstNumber);
+    upiCtrl = TextEditingController(text: widget.initialUpiId);
+  }
+
+  @override
+  void dispose() {
+    shopCtrl.dispose();
+    ownerCtrl.dispose();
+    phoneCtrl.dispose();
+    emailCtrl.dispose();
+    addressCtrl.dispose();
+    gstCtrl.dispose();
+    upiCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -848,21 +867,21 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                 const SizedBox(height: 20),
 
                 _inputField(
-                    ctrl: widget.shopCtrl,
+                    ctrl: shopCtrl,
                     label: 'Shop Name',
                     icon: Icons.store_outlined,
                     validator: (v) =>
                         v == null || v.isEmpty ? 'Required' : null),
                 const SizedBox(height: 12),
                 _inputField(
-                    ctrl: widget.ownerCtrl,
+                    ctrl: ownerCtrl,
                     label: 'Owner Name',
                     icon: Icons.person_outline,
                     validator: (v) =>
                         v == null || v.isEmpty ? 'Required' : null),
                 const SizedBox(height: 12),
                 _inputField(
-                    ctrl: widget.phoneCtrl,
+                    ctrl: phoneCtrl,
                     label: 'Phone',
                     icon: Icons.phone_outlined,
                     keyboardType: TextInputType.phone,
@@ -870,24 +889,24 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                         v == null || v.isEmpty ? 'Required' : null),
                 const SizedBox(height: 12),
                 _inputField(
-                    ctrl: widget.emailCtrl,
+                    ctrl: emailCtrl,
                     label: 'Email (optional)',
                     icon: Icons.email_outlined,
                     keyboardType: TextInputType.emailAddress),
                 const SizedBox(height: 12),
                 _inputField(
-                    ctrl: widget.addressCtrl,
+                    ctrl: addressCtrl,
                     label: 'Address (optional)',
                     icon: Icons.location_on_outlined,
                     maxLines: 2),
                 const SizedBox(height: 12),
                 _inputField(
-                    ctrl: widget.gstCtrl,
+                    ctrl: gstCtrl,
                     label: 'GST Number (optional)',
                     icon: Icons.receipt_outlined),
                 const SizedBox(height: 12),
                 _inputField(
-                    ctrl: widget.upiCtrl,
+                    ctrl: upiCtrl,
                     label: 'UPI ID (e.g. myshop@paytm)',
                     icon: Icons.qr_code),
                 const SizedBox(height: 24),
@@ -916,7 +935,15 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
-    final success = await widget.onSave();
+    final success = await widget.onSave(
+      shopCtrl.text.trim(),
+      ownerCtrl.text.trim(),
+      phoneCtrl.text.trim(),
+      emailCtrl.text.trim(),
+      addressCtrl.text.trim(),
+      gstCtrl.text.trim(),
+      upiCtrl.text.trim(),
+    );
     if (mounted) {
       setState(() => _saving = false);
       final messenger = ScaffoldMessenger.of(context);

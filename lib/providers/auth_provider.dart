@@ -109,6 +109,55 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  Future<bool> loginWithGoogle(String idToken) async {
+    try{
+      final result = await AuthApiService.googleLogin(idToken);
+      if(result == null) return false;
+
+      final accessToken = result["accessToken"] as String?;
+      final refreshToken = result["refreshToken"] as String?;
+
+      if(accessToken == null || refreshToken == null){
+        debugPrint('Google Login Response missing tokens');
+        return false;
+      }
+
+      await TokenStorage.saveAccessToken(accessToken);
+      await TokenStorage.saveRefreshToken(refreshToken);
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isLoggedIn',true);
+      _isLoggedIn = true;
+      
+      final profile = await ProfileApiService.getProfile();
+      if(profile != null){
+        final shop = profile['shopName'] as String?;
+        final owner = profile['fullName'] as String?;
+        final ph = profile['phone'] as String?;
+        final em = profile['email'] as String?;
+
+        if(shop != null){
+          await prefs.setString('shopName', shop);
+          _shopName = shop;
+        }
+        if(owner != null){
+          await prefs.setString('ownerName', owner);
+          _ownerName = owner;
+        }
+        if(ph != null){
+          await prefs.setString('phone', ph);
+          _phone = ph;
+        }
+        if(em != null) await prefs.setString('email', em);
+      }
+      notifyListeners();
+      return true;
+    }catch(e){
+      debugPrint("Login error: $e");
+      return false; 
+    }
+  }
+
   Future<bool> signup({
     required String shopName,
     required String ownerName,

@@ -1,4 +1,6 @@
 import 'package:flutter/foundation.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:khata/config/auth0_config.dart';
 
 /// Enum for social auth providers - easily extendable
 enum SocialAuthProvider {
@@ -17,8 +19,10 @@ class SocialAuthResult {
   final String? photoUrl;
   final String? error;
   final SocialAuthProvider provider;
+  final String? idToken;
 
   SocialAuthResult({
+    this.idToken, 
     required this.success,
     required this.provider,
     this.userId,
@@ -38,30 +42,53 @@ abstract class SocialAuthProviderHandler {
 
 /// Google Auth Handler
 class GoogleAuthHandler implements SocialAuthProviderHandler {
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    scopes: ['email', 'profile'],
+    serverClientId: '337359007063-agj5j2cjd5nare3m5qrc4khicb1j7m3v.apps.googleusercontent.com',
+  );
   @override
   SocialAuthProvider get provider => SocialAuthProvider.google;
 
   @override
   Future<SocialAuthResult> signIn() async {
     try {
-      // TODO: Implement actual Google Sign-In
-      // Add google_sign_in package and implement:
-      // final GoogleSignInAccount? account = await GoogleSignIn().signIn();
-
-      // Mock implementation for now
-      await Future.delayed(const Duration(seconds: 1));
-
-      if (kDebugMode) {
-        print('Google Sign-In triggered');
+      if(kDebugMode){
+        print("google sign in triggered");
       }
+      await _googleSignIn.signOut();
+      
+      final GoogleSignInAccount? account = await _googleSignIn.signIn();
 
-      // Return mock result - replace with actual implementation
+      if(account == null){
+        return SocialAuthResult(
+          success: false, 
+          provider: provider,
+          error: 'Sign in aborted by user'
+        );
+      }
+      final GoogleSignInAuthentication googleAuth = await account.authentication;
+      final String? idToken = googleAuth.idToken;
+      if(idToken == null){
+        return SocialAuthResult(
+          success: false,
+          provider: provider,
+          error: 'Google Sign-In Id Token not found'
+        );
+      }
       return SocialAuthResult(
-        success: false,
+        success: true,
         provider: provider,
-        error: 'Google Sign-In not configured. Add google_sign_in package.',
+        userId: account.id,
+        email: account.email,
+        displayName: account.displayName,
+        photoUrl: account.photoUrl,
+        idToken: idToken,
       );
+
     } catch (e) {
+      if(kDebugMode){
+        print('Error signing in with Google: $e');
+      }
       return SocialAuthResult(
         success: false,
         provider: provider,
@@ -72,7 +99,11 @@ class GoogleAuthHandler implements SocialAuthProviderHandler {
 
   @override
   Future<void> signOut() async {
-    // TODO: Implement Google Sign-Out
+    try {
+      await _googleSignIn.signOut();
+    } catch (e) {
+      if (kDebugMode) print('Error signing out of Google: $e');
+    }
   }
 }
 
