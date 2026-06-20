@@ -44,7 +44,7 @@ abstract class SocialAuthProviderHandler {
 class GoogleAuthHandler implements SocialAuthProviderHandler {
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: ['email', 'profile'],
-    serverClientId: '337359007063-agj5j2cjd5nare3m5qrc4khicb1j7m3v.apps.googleusercontent.com',
+    serverClientId: Auth0Config.clientId,
   );
   @override
   SocialAuthProvider get provider => SocialAuthProvider.google;
